@@ -1,0 +1,111 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Description: >
+  CloudDesk multi-tenant SaaS backend.
+  Provides a serverless HTTP API using AWS Lambda and Amazon API Gateway.
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - staging
+      - prod
+    Description: Deployment environment name
+
+Globals:
+  Function:
+    Runtime: python3.13
+    Architectures:
+      - x86_64
+    MemorySize: 256
+    Timeout: 10
+
+    Environment:
+      Variables:
+        APP_ENV: !Ref Environment
+        LOG_LEVEL: INFO
+
+    LoggingConfig:
+      LogFormat: JSON
+      ApplicationLogLevel: INFO
+      SystemLogLevel: WARN
+
+    Tags:
+      Application: CloudDesk
+      Environment: !Ref Environment
+      ManagedBy: AWS-SAM
+
+Resources:
+
+  ############################################
+  # API Gateway HTTP API
+  ############################################
+
+  CloudDeskHttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: !Ref Environment
+
+      CorsConfiguration:
+        AllowOrigins:
+          - "*"
+        AllowHeaders:
+          - Content-Type
+          - Authorization
+        AllowMethods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - OPTIONS
+
+      Tags:
+        Application: CloudDesk
+        Environment: !Ref Environment
+        ManagedBy: AWS-SAM
+
+  ############################################
+  # Health Lambda Function
+  ############################################
+
+  HealthFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub clouddesk-${Environment}-health
+
+      Description: >
+        Public health-check endpoint for the CloudDesk backend.
+
+      CodeUri: health/
+      Handler: handler.lambda_handler
+
+      Events:
+        HealthEndpoint:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CloudDeskHttpApi
+            Path: /health
+            Method: GET
+
+Outputs:
+
+  CloudDeskApiUrl:
+    Description: CloudDesk HTTP API base URL
+    Value: !Sub >
+      https://${CloudDeskHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/${Environment}
+
+  HealthEndpointUrl:
+    Description: CloudDesk health-check endpoint
+    Value: !Sub >
+      https://${CloudDeskHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/${Environment}/health
+
+  HealthFunctionArn:
+    Description: ARN of the CloudDesk health Lambda function
+    Value: !GetAtt HealthFunction.Arn
+
+  HealthFunctionRoleArn:
+    Description: ARN of the IAM role generated for the health function
+    Value: !GetAtt HealthFunctionRole.Arn
