@@ -9,4 +9,13 @@ manifest_hash = "d41d8cd98f00b204e9800998ecf8427e"
 packagetype = "Zip"
 functions = ["HealthFunction"]
 
+[function_build_definitions.71bcb4ea-f188-4288-929b-55383f89e7f8]
+codeuri = "C:\\Users\\igesi\\clouddesk-multi-tenant-saas\\backend\\database_test"
+runtime = "python3.13"
+architecture = "x86_64"
+handler = "handler.lambda_handler"
+manifest_hash = "d5f1f89bed5b975c6801648c69b25034"
+packagetype = "Zip"
+functions = ["DatabaseTestFunction"]
+
 [layer_build_definitions]

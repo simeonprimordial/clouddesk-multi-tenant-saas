@@ -15,6 +15,11 @@ Parameters:
       - prod
     Description: Deployment environment name
 
+  DatabaseSecretArn:
+    Type: String
+    Description: ARN of the CloudDesk PostgreSQL secret in AWS Secrets Manager
+    NoEcho: true  
+
 Globals:
   Function:
     Runtime: python3.13
@@ -27,6 +32,7 @@ Globals:
       Variables:
         APP_ENV: !Ref Environment
         LOG_LEVEL: INFO
+        DATABASE_SECRET_ARN: !Ref DatabaseSecretArn
 
     LoggingConfig:
       LogFormat: JSON
@@ -90,6 +96,27 @@ Resources:
             Path: /health
             Method: GET
 
+
+  ############################################
+  # Database Connectivity Test Function
+  ############################################
+
+  DatabaseTestFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub clouddesk-${Environment}-database-test
+
+      Description: >
+        Tests secure retrieval of CloudDesk PostgreSQL credentials
+        from AWS Secrets Manager.
+
+      CodeUri: database_test/
+      Handler: handler.lambda_handler
+
+      Policies:
+        - AWSSecretsManagerGetSecretValuePolicy:
+            SecretArn: !Ref DatabaseSecretArn
+
 Outputs:
 
   CloudDeskApiUrl:
@@ -109,3 +136,7 @@ Outputs:
   HealthFunctionRoleArn:
     Description: ARN of the IAM role generated for the health function
     Value: !GetAtt HealthFunctionRole.Arn
+  
+  DatabaseTestFunctionArn:
+    Description: ARN of the CloudDesk database connectivity test function
+    Value: !GetAtt DatabaseTestFunction.Arn

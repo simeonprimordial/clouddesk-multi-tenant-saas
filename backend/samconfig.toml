@@ -4,6 +4,7 @@ version = 0.1
 
 [default.global.parameters]
 stack_name = "backend"
+region = "us-east-1"
 
 [default.build.parameters]
 cached = true
@@ -16,6 +17,11 @@ lint = true
 capabilities = "CAPABILITY_IAM"
 confirm_changeset = true
 resolve_s3 = true
+stack_name = "clouddesk-backend"
+s3_prefix = "clouddesk-backend"
+region = "us-east-1"
+parameter_overrides = "Environment=\"dev\" DatabaseSecretArn=\"arn:aws:secretsmanager:us-east-1:441870953802:secret:clouddesk/dev/database-fgsdd0\""
+image_repositories = []
 
 [default.package.parameters]
 resolve_s3 = true
