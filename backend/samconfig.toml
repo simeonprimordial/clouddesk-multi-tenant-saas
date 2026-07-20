@@ -19,8 +19,7 @@ confirm_changeset = true
 resolve_s3 = true
 stack_name = "clouddesk-backend"
 s3_prefix = "clouddesk-backend"
-region = "us-east-1"
-parameter_overrides = "Environment=\"dev\" DatabaseSecretArn=\"arn:aws:secretsmanager:us-east-1:441870953802:secret:clouddesk/dev/database-fgsdd0\""
+parameter_overrides = "Environment=\"dev\" VpcId=\"vpc-0f5bbd66ff9fa24f8\" RdsSecurityGroupId=\"sg-05dc391dd52d0d63b\" LambdaSubnetIds=\"subnet-078f2418a092901fd,subnet-045b3b611cdf127b0\""
 image_repositories = []
 
 [default.package.parameters]

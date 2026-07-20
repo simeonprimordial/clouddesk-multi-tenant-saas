@@ -20,6 +20,19 @@ Parameters:
     Description: ARN of the CloudDesk PostgreSQL secret in AWS Secrets Manager
     NoEcho: true  
 
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: Default VPC containing the CloudDesk RDS database
+
+  RdsSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: Security group currently attached to the CloudDesk RDS database  
+
+  LambdaSubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: Private subnet IDs used by the CloudDesk Lambda functions
+
+
 Globals:
   Function:
     Runtime: python3.13
@@ -32,7 +45,7 @@ Globals:
       Variables:
         APP_ENV: !Ref Environment
         LOG_LEVEL: INFO
-        DATABASE_SECRET_ARN: !Ref DatabaseSecretArn
+
 
     LoggingConfig:
       LogFormat: JSON
@@ -73,6 +86,24 @@ Resources:
         Environment: !Ref Environment
         ManagedBy: AWS-SAM
 
+  
+  ############################################
+  # Shared Lambda Layer
+  ############################################
+
+  SharedLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: !Sub clouddesk-${Environment}-shared
+      Description: Shared CloudDesk libraries
+
+      ContentUri: layers/shared/
+
+      CompatibleRuntimes:
+        - python3.13
+
+      RetentionPolicy: Delete
+
   ############################################
   # Health Lambda Function
   ############################################
@@ -81,6 +112,9 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub clouddesk-${Environment}-health
+
+      Layers:
+        - !Ref SharedLayer
 
       Description: >
         Public health-check endpoint for the CloudDesk backend.
@@ -95,6 +129,7 @@ Resources:
             ApiId: !Ref CloudDeskHttpApi
             Path: /health
             Method: GET
+      
 
 
   ############################################
@@ -105,6 +140,9 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub clouddesk-${Environment}-database-test
+      
+      Layers:
+        - !Ref SharedLayer
 
       Description: >
         Tests secure retrieval of CloudDesk PostgreSQL credentials
@@ -113,9 +151,107 @@ Resources:
       CodeUri: database_test/
       Handler: handler.lambda_handler
 
+      Environment:
+        Variables:
+          DATABASE_SECRET_ARN: !Ref DatabaseSecretArn
+
+      VpcConfig:
+        SubnetIds: !Ref LambdaSubnetIds
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+
       Policies:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+
         - AWSSecretsManagerGetSecretValuePolicy:
             SecretArn: !Ref DatabaseSecretArn
+
+      Events:
+        DatabaseTestEndpoint:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CloudDeskHttpApi
+            Path: /database-test
+            Method: GET    
+
+
+
+  ############################################
+  # Lambda Security Group
+  ############################################
+
+  LambdaSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for CloudDesk database-connected Lambdas
+      VpcId: !Ref VpcId
+
+      SecurityGroupEgress:
+        - IpProtocol: "-1"
+          CidrIp: 0.0.0.0/0
+
+      Tags:
+        - Key: Name
+          Value: !Sub clouddesk-${Environment}-lambda-sg
+        - Key: Application
+          Value: CloudDesk
+        - Key: Environment
+          Value: !Ref Environment
+
+  LambdaToRdsIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref RdsSecurityGroupId
+      IpProtocol: tcp
+      FromPort: 5432
+      ToPort: 5432
+      SourceSecurityGroupId: !Ref LambdaSecurityGroup
+      Description: Allow CloudDesk Lambda functions to connect to PostgreSQL
+
+  ############################################
+  # Secrets Manager VPC Endpoint Security Group
+  ############################################
+
+  SecretsManagerEndpointSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for Secrets Manager Interface Endpoint
+      VpcId: !Ref VpcId
+
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          SourceSecurityGroupId: !Ref LambdaSecurityGroup
+
+      Tags:
+        - Key: Name
+          Value: !Sub clouddesk-${Environment}-secrets-endpoint-sg
+
+  ############################################
+  # Secrets Manager Interface Endpoint
+  ############################################
+
+  SecretsManagerVpcEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcEndpointType: Interface
+
+      VpcId: !Ref VpcId
+
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.secretsmanager
+
+      PrivateDnsEnabled: true
+
+      SecurityGroupIds:
+        - !Ref SecretsManagerEndpointSecurityGroup
+
+      SubnetIds: !Ref LambdaSubnetIds
+
+      Tags:
+        - Key: Name
+          Value: !Sub clouddesk-${Environment}-secretsmanager-endpoint
+
 
 Outputs:
 

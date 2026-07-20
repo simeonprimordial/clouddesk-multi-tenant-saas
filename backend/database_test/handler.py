@@ -1,97 +1,93 @@
-import json
+"""
+CloudDesk database connectivity test Lambda.
+
+This function verifies that Lambda can:
+
+1. Retrieve PostgreSQL credentials from AWS Secrets Manager.
+2. Connect to the private Amazon RDS PostgreSQL instance.
+3. Execute a simple SQL query.
+"""
+
 import logging
-import os
 from typing import Any
 
-import boto3
-from botocore.exceptions import BotoCoreError, ClientError
+from shared.db import DatabaseConnectionError, get_connection
+from shared.response import error, success
+from shared.secrets import SecretConfigurationError
 
-logger = logging.getLogger()
-logger.setLevel(os.getenv("LOG_LEVEL", "INFO"))
-
-secrets_client = boto3.client("secretsmanager")
+logger = logging.getLogger(__name__)
 
 
-def get_database_secret() -> dict[str, Any]:
-    """Retrieve and validate the CloudDesk database secret."""
+def lambda_handler(
+    event: dict[str, Any],
+    context: Any,
+) -> dict[str, Any]:
+    """Test the CloudDesk PostgreSQL database connection."""
 
-    secret_arn = os.getenv("DATABASE_SECRET_ARN")
-
-    if not secret_arn:
-        raise RuntimeError("DATABASE_SECRET_ARN is not configured")
+    request_id = getattr(context, "aws_request_id", None)
 
     try:
-        response = secrets_client.get_secret_value(SecretId=secret_arn)
-    except (ClientError, BotoCoreError) as error:
-        logger.exception("Unable to retrieve database secret")
-        raise RuntimeError("Database secret retrieval failed") from error
+        connection = get_connection()
 
-    secret_string = response.get("SecretString")
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT
+                    current_database() AS database_name,
+                    current_user AS database_user,
+                    version() AS postgres_version,
+                    NOW() AS database_time;
+                """
+            )
 
-    if not secret_string:
-        raise RuntimeError("Database secret does not contain SecretString")
-
-    try:
-        secret = json.loads(secret_string)
-    except json.JSONDecodeError as error:
-        raise RuntimeError("Database secret is not valid JSON") from error
-
-    required_fields = {
-        "host",
-        "port",
-        "dbname",
-        "username",
-        "password",
-    }
-
-    missing_fields = required_fields.difference(secret)
-
-    if missing_fields:
-        missing = ", ".join(sorted(missing_fields))
-        raise RuntimeError(f"Database secret is missing fields: {missing}")
-
-    return secret
-
-
-def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
-    """Verify that Lambda can securely retrieve the database secret."""
-
-    try:
-        secret = get_database_secret()
+            result = cursor.fetchone()
 
         logger.info(
-            "Database secret retrieved successfully",
+            "Database connectivity test succeeded",
             extra={
-                "database": secret["dbname"],
-                "host_configured": bool(secret["host"]),
-                "request_id": getattr(context, "aws_request_id", None),
+                "request_id": request_id,
+                "database": result["database_name"],
             },
         )
 
-        return {
-            "statusCode": 200,
-            "body": json.dumps(
-                {
-                    "success": True,
-                    "message": "Database secret retrieved successfully",
-                    "data": {
-                        "database": secret["dbname"],
-                        "engine": secret.get("engine", "postgres"),
-                        "port": secret["port"],
-                    },
-                }
-            ),
-        }
+        return success(
+            message="Database connection established successfully",
+            data={
+                "database": result["database_name"],
+                "database_user": result["database_user"],
+                "database_time": result["database_time"].isoformat(),
+            },
+        )
 
-    except RuntimeError as error:
-        logger.exception("Database secret validation failed")
+    except SecretConfigurationError:
+        logger.exception(
+            "Database secret configuration error",
+            extra={"request_id": request_id},
+        )
 
-        return {
-            "statusCode": 500,
-            "body": json.dumps(
-                {
-                    "success": False,
-                    "message": str(error),
-                }
-            ),
-        }
+        return error(
+            message="Database credentials could not be retrieved",
+            status_code=500,
+        )
+
+    except DatabaseConnectionError:
+        logger.exception(
+            "Database connection failed",
+            extra={"request_id": request_id},
+        )
+
+        return error(
+            message="Unable to connect to the database",
+            status_code=500,
+        )
+
+    except Exception:
+        logger.exception(
+            "Unexpected database test error",
+            extra={"request_id": request_id},
+        )
+
+        return error(
+            message="An unexpected database error occurred",
+            status_code=500,
+        )
