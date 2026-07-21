@@ -54,7 +54,6 @@ def lambda_handler(
             message="Database connection established successfully",
             data={
                 "database": result["database_name"],
-                "database_user": result["database_user"],
                 "database_time": result["database_time"].isoformat(),
             },
         )
