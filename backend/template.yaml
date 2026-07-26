@@ -45,6 +45,8 @@ Globals:
       Variables:
         APP_ENV: !Ref Environment
         LOG_LEVEL: INFO
+        # COGNITO_USER_POOL_ID: !Ref UserPool
+        # COGNITO_APP_CLIENT_ID: !Ref UserPoolClient
 
 
     LoggingConfig:
@@ -81,11 +83,81 @@ Resources:
           - DELETE
           - OPTIONS
 
+      Auth:
+        Authorizers:
+          CognitoJwtAuthorizer:
+            IdentitySource: $request.header.Authorization
+            JwtConfiguration:
+              issuer: !Sub https://cognito-idp.${AWS::Region}.${AWS::URLSuffix}/${UserPool}
+              audience:
+                - !Ref UserPoolClient
+
       Tags:
         Application: CloudDesk
         Environment: !Ref Environment
         ManagedBy: AWS-SAM
 
+  ############################################
+  # Amazon Cognito
+  ############################################
+
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub clouddesk-${Environment}-users
+
+      LambdaConfig:
+        PostConfirmation: !GetAtt UserProvisioningFunction.Arn
+
+      UsernameAttributes:
+        - email
+
+      AutoVerifiedAttributes:
+        - email
+
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireUppercase: true
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: true
+
+      AccountRecoverySetting:
+        RecoveryMechanisms:
+          - Name: verified_email
+            Priority: 1
+
+      UserPoolTags:
+        Application: CloudDesk
+        Environment: !Ref Environment
+        ManagedBy: AWS-SAM
+
+
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: !Sub clouddesk-${Environment}-client
+
+      UserPoolId: !Ref UserPool
+
+      GenerateSecret: false
+
+      ExplicitAuthFlows:
+        - ALLOW_USER_SRP_AUTH
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+
+      PreventUserExistenceErrors: ENABLED
+
+      AccessTokenValidity: 1
+      IdTokenValidity: 1
+      RefreshTokenValidity: 30
+
+      TokenValidityUnits:
+        AccessToken: hours
+        IdToken: hours
+        RefreshToken: days
   
   ############################################
   # Shared Lambda Layer
@@ -168,7 +240,7 @@ Resources:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
 
         - AWSSecretsManagerGetSecretValuePolicy:
-            SecretArn: !Ref DatabaseSecretArn
+            SecretArn: !Ref DatabaseSecretArn  
 
       Events:
         DatabaseTestEndpoint:
@@ -176,8 +248,199 @@ Resources:
           Properties:
             ApiId: !Ref CloudDeskHttpApi
             Path: /database-test
-            Method: GET    
+            Method: GET 
 
+            Auth:
+              Authorizer: CognitoJwtAuthorizer   
+
+
+  ############################################
+  # Cognito User Provisioning Function
+  ############################################
+
+  UserProvisioningFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub clouddesk-${Environment}-user-provisioning
+
+      Description: >
+        Creates a CloudDesk database user after
+        successful Cognito user confirmation.
+
+      CodeUri: user_provisioning/
+      Handler: handler.lambda_handler
+
+      Layers:
+        - !Ref SharedLayer
+
+      Environment:
+        Variables:
+          DATABASE_SECRET_ARN: !Ref DatabaseSecretArn
+
+      VpcConfig:
+        SubnetIds: !Ref LambdaSubnetIds
+
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+
+      Policies:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+
+        - AWSSecretsManagerGetSecretValuePolicy:
+            SecretArn: !Ref DatabaseSecretArn
+
+
+  ############################################
+  # Current User Function
+  ############################################
+
+  MeFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub clouddesk-${Environment}-me
+
+      Description: >
+        Returns the authenticated CloudDesk user's application profile.
+
+      CodeUri: me/
+      Handler: handler.lambda_handler
+
+      Layers:
+        - !Ref SharedLayer
+
+      Environment:
+        Variables:
+          DATABASE_SECRET_ARN: !Ref DatabaseSecretArn
+
+      VpcConfig:
+        SubnetIds: !Ref LambdaSubnetIds
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+
+      Policies:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+
+        - AWSSecretsManagerGetSecretValuePolicy:
+            SecretArn: !Ref DatabaseSecretArn
+
+      Events:
+        MeEndpoint:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CloudDeskHttpApi
+            Path: /me
+            Method: GET
+
+            Auth:
+              Authorizer: CognitoJwtAuthorizer
+
+
+  ############################################
+  # Create Tenant Function
+  ############################################
+
+  CreateTenantFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub clouddesk-${Environment}-create-tenant
+
+      Description: >
+        Creates a new tenant and assigns the authenticated user
+        as the tenant owner.
+
+      CodeUri: create_tenant/
+      Handler: handler.lambda_handler
+
+      Layers:
+        - !Ref SharedLayer
+
+      Environment:
+        Variables:
+          DATABASE_SECRET_ARN: !Ref DatabaseSecretArn
+
+      VpcConfig:
+        SubnetIds: !Ref LambdaSubnetIds
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+
+      Policies:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+
+        - AWSSecretsManagerGetSecretValuePolicy:
+            SecretArn: !Ref DatabaseSecretArn
+
+      Events:
+        CreateTenant:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CloudDeskHttpApi
+            Path: /tenants
+            Method: POST
+
+            Auth:
+              Authorizer: CognitoJwtAuthorizer
+
+
+
+  ############################################
+  # List Tenants Function
+  ############################################
+
+  ListTenantsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub clouddesk-${Environment}-list-tenants
+
+      Description: >
+        Returns the active tenants available to the authenticated user.
+
+      CodeUri: list_tenants/
+      Handler: handler.lambda_handler
+
+      Layers:
+        - !Ref SharedLayer
+
+      Environment:
+        Variables:
+          DATABASE_SECRET_ARN: !Ref DatabaseSecretArn
+
+      VpcConfig:
+        SubnetIds: !Ref LambdaSubnetIds
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+
+      Policies:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+
+        - AWSSecretsManagerGetSecretValuePolicy:
+            SecretArn: !Ref DatabaseSecretArn
+
+      Events:
+        ListTenants:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CloudDeskHttpApi
+            Path: /tenants
+            Method: GET
+
+            Auth:
+              Authorizer: CognitoJwtAuthorizer
+
+
+  ############################################
+  # Allow Cognito to invoke provisioning Lambda
+  ############################################
+
+  UserProvisioningPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+
+      FunctionName: !Ref UserProvisioningFunction
+
+      Principal: cognito-idp.amazonaws.com
+
+      SourceArn: !GetAtt UserPool.Arn
 
 
   ############################################
@@ -280,3 +543,30 @@ Outputs:
   DatabaseTestFunctionArn:
     Description: ARN of the CloudDesk database connectivity test function
     Value: !GetAtt DatabaseTestFunction.Arn
+  
+  CognitoUserPoolId:
+    Description: CloudDesk Cognito User Pool ID
+    Value: !Ref UserPool
+
+  CognitoUserPoolArn:
+    Description: CloudDesk Cognito User Pool ARN
+    Value: !GetAtt UserPool.Arn
+
+  CognitoAppClientId:
+    Description: CloudDesk Cognito App Client ID
+    Value: !Ref UserPoolClient 
+
+  MeEndpointUrl:
+    Description: Authenticated CloudDesk user profile endpoint
+    Value: !Sub >
+      https://${CloudDeskHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/${Environment}/me
+
+  CreateTenantEndpointUrl:
+    Description: Create Tenant endpoint
+    Value: !Sub >
+      https://${CloudDeskHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/${Environment}/tenants
+
+  ListTenantsEndpointUrl:
+    Description: List Tenants endpoint
+    Value: !Sub >
+      https://${CloudDeskHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/${Environment}/tenants    
