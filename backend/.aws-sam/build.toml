@@ -54,4 +54,49 @@ manifest_hash = "d41d8cd98f00b204e9800998ecf8427e"
 packagetype = "Zip"
 functions = ["ListTenantsFunction"]
 
+[function_build_definitions.39383d98-fe8d-41dc-a496-f632ce94c616]
+codeuri = "C:\\Users\\igesi\\clouddesk-multi-tenant-saas\\backend\\get_tenant"
+runtime = "python3.13"
+architecture = "x86_64"
+handler = "handler.lambda_handler"
+manifest_hash = "d41d8cd98f00b204e9800998ecf8427e"
+packagetype = "Zip"
+functions = ["GetTenantFunction"]
+
+[function_build_definitions.4fb08db8-45c3-4d49-84cd-6c9cb0a6e0e6]
+codeuri = "C:\\Users\\igesi\\clouddesk-multi-tenant-saas\\backend\\list_members"
+runtime = "python3.13"
+architecture = "x86_64"
+handler = "handler.lambda_handler"
+manifest_hash = "d41d8cd98f00b204e9800998ecf8427e"
+packagetype = "Zip"
+functions = ["ListMembersFunction"]
+
+[function_build_definitions.81abbe77-82c2-4c55-94a7-6ab2ea4c28e3]
+codeuri = "C:\\Users\\igesi\\clouddesk-multi-tenant-saas\\backend\\add_member"
+runtime = "python3.13"
+architecture = "x86_64"
+handler = "handler.lambda_handler"
+manifest_hash = "d41d8cd98f00b204e9800998ecf8427e"
+packagetype = "Zip"
+functions = ["AddMemberFunction"]
+
+[function_build_definitions.0f89d829-0983-4ce5-954f-a1143d7dadf6]
+codeuri = "C:\\Users\\igesi\\clouddesk-multi-tenant-saas\\backend\\update_member"
+runtime = "python3.13"
+architecture = "x86_64"
+handler = "handler.lambda_handler"
+manifest_hash = "d41d8cd98f00b204e9800998ecf8427e"
+packagetype = "Zip"
+functions = ["UpdateMemberFunction"]
+
+[function_build_definitions.bc50460c-1989-4b38-8f74-659ccb7118fd]
+codeuri = "C:\\Users\\igesi\\clouddesk-multi-tenant-saas\\backend\\remove_member"
+runtime = "python3.13"
+architecture = "x86_64"
+handler = "handler.lambda_handler"
+manifest_hash = "d41d8cd98f00b204e9800998ecf8427e"
+packagetype = "Zip"
+functions = ["RemoveMemberFunction"]
+
 [layer_build_definitions]

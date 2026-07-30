@@ -428,6 +428,231 @@ Resources:
 
 
   ############################################
+  # Get Tenant Function
+  ############################################
+
+  GetTenantFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub clouddesk-${Environment}-get-tenant
+
+      Description: >
+        Returns a single tenant that the authenticated
+        user belongs to.
+
+      CodeUri: get_tenant/
+      Handler: handler.lambda_handler
+
+      Layers:
+        - !Ref SharedLayer
+
+      Environment:
+        Variables:
+          DATABASE_SECRET_ARN: !Ref DatabaseSecretArn
+
+      VpcConfig:
+        SubnetIds: !Ref LambdaSubnetIds
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+
+      Policies:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+
+        - AWSSecretsManagerGetSecretValuePolicy:
+            SecretArn: !Ref DatabaseSecretArn
+
+      Events:
+        GetTenant:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CloudDeskHttpApi
+            Path: /tenants/{tenantId}
+            Method: GET
+
+            Auth:
+              Authorizer: CognitoJwtAuthorizer
+
+  ############################################
+  # List Members Function
+  ############################################
+
+  ListMembersFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub clouddesk-${Environment}-list-members
+
+      Description: >
+        Returns all active members belonging to a tenant.
+
+      CodeUri: list_members/
+      Handler: handler.lambda_handler
+
+      Layers:
+        - !Ref SharedLayer
+
+      Environment:
+        Variables:
+          DATABASE_SECRET_ARN: !Ref DatabaseSecretArn
+
+      VpcConfig:
+        SubnetIds: !Ref LambdaSubnetIds
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+
+      Policies:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+
+        - AWSSecretsManagerGetSecretValuePolicy:
+            SecretArn: !Ref DatabaseSecretArn
+
+      Events:
+        ListMembers:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CloudDeskHttpApi
+            Path: /tenants/{tenantId}/members
+            Method: GET
+
+            Auth:
+              Authorizer: CognitoJwtAuthorizer
+
+
+  ############################################
+  # Add Member Function
+  ############################################
+
+  AddMemberFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub clouddesk-${Environment}-add-member
+
+      Description: >
+        Adds an existing CloudDesk user to a tenant.
+
+      CodeUri: add_member/
+      Handler: handler.lambda_handler
+
+      Layers:
+        - !Ref SharedLayer
+
+      Environment:
+        Variables:
+          DATABASE_SECRET_ARN: !Ref DatabaseSecretArn
+
+      VpcConfig:
+        SubnetIds: !Ref LambdaSubnetIds
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+
+      Policies:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+
+        - AWSSecretsManagerGetSecretValuePolicy:
+            SecretArn: !Ref DatabaseSecretArn
+
+      Events:
+        AddMember:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CloudDeskHttpApi
+            Path: /tenants/{tenantId}/members
+            Method: POST
+
+            Auth:
+              Authorizer: CognitoJwtAuthorizer
+
+
+  ############################################
+  # Update Member Function
+  ############################################
+
+  UpdateMemberFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub clouddesk-${Environment}-update-member
+
+      Description: >
+        Updates the role of an existing tenant member.
+
+      CodeUri: update_member/
+      Handler: handler.lambda_handler
+
+      Layers:
+        - !Ref SharedLayer
+
+      Environment:
+        Variables:
+          DATABASE_SECRET_ARN: !Ref DatabaseSecretArn
+
+      VpcConfig:
+        SubnetIds: !Ref LambdaSubnetIds
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+
+      Policies:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+
+        - AWSSecretsManagerGetSecretValuePolicy:
+            SecretArn: !Ref DatabaseSecretArn
+
+      Events:
+        UpdateMember:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CloudDeskHttpApi
+            Path: /tenants/{tenantId}/members/{userId}
+            Method: PUT
+
+            Auth:
+              Authorizer: CognitoJwtAuthorizer
+
+
+  ############################################
+  # Remove Member Function
+  ############################################
+
+  RemoveMemberFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub clouddesk-${Environment}-remove-member
+
+      Description: >
+        Removes a tenant member by marking the membership inactive.
+
+      CodeUri: remove_member/
+      Handler: handler.lambda_handler
+
+      Layers:
+        - !Ref SharedLayer
+
+      Environment:
+        Variables:
+          DATABASE_SECRET_ARN: !Ref DatabaseSecretArn
+
+      VpcConfig:
+        SubnetIds: !Ref LambdaSubnetIds
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+
+      Policies:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+
+        - AWSSecretsManagerGetSecretValuePolicy:
+            SecretArn: !Ref DatabaseSecretArn
+
+      Events:
+        RemoveMember:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CloudDeskHttpApi
+            Path: /tenants/{tenantId}/members/{userId}
+            Method: DELETE
+
+            Auth:
+              Authorizer: CognitoJwtAuthorizer
+
+
+  ############################################
   # Allow Cognito to invoke provisioning Lambda
   ############################################
 
@@ -569,4 +794,29 @@ Outputs:
   ListTenantsEndpointUrl:
     Description: List Tenants endpoint
     Value: !Sub >
-      https://${CloudDeskHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/${Environment}/tenants    
+      https://${CloudDeskHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/${Environment}/tenants   
+
+  GetTenantEndpointUrl:
+    Description: Get Tenant endpoint
+    Value: !Sub >
+      https://${CloudDeskHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/${Environment}/tenants/{tenantId}
+
+  ListMembersEndpointUrl:
+    Description: List Members endpoint
+    Value: !Sub >
+      https://${CloudDeskHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/${Environment}/tenants/{tenantId}/members
+
+  AddMemberEndpointUrl:
+    Description: Add Member endpoint
+    Value: !Sub >
+      https://${CloudDeskHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/${Environment}/tenants/{tenantId}/members
+
+  UpdateMemberEndpointUrl:
+    Description: Update Member endpoint
+    Value: !Sub >
+      https://${CloudDeskHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/${Environment}/tenants/{tenantId}/members/{userId}
+
+  RemoveMemberEndpointUrl:
+    Description: Remove Member endpoint
+    Value: !Sub >
+      https://${CloudDeskHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/${Environment}/tenants/{tenantId}/members/{userId}    
