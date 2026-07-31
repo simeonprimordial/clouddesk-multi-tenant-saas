@@ -10,16 +10,16 @@ on:
       - main
 
 permissions:
-  contents: read
   id-token: write
+  contents: read
 
 concurrency:
-  group: clouddesk-production-deployment
+  group: clouddesk-production
   cancel-in-progress: false
 
 jobs:
   deploy:
-    name: Deploy CloudDesk to AWS
+    name: Deploy CloudDesk Backend
 
     if: >
       github.event.workflow_run.conclusion == 'success' &&
@@ -32,12 +32,12 @@ jobs:
         working-directory: backend
 
     steps:
-      - name: Checkout validated commit
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
 
-      - name: Set up Python 3.13
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.13"
@@ -45,17 +45,17 @@ jobs:
       - name: Set up AWS SAM CLI
         uses: aws-actions/setup-sam@v2
 
-      - name: Configure AWS credentials using OIDC
+      - name: Configure AWS Credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v5
         with:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
-          role-session-name: CloudDeskGitHubDeployment
+          role-session-name: CloudDeskDeployment
 
-      - name: Verify assumed AWS identity
+      - name: Verify AWS Identity
         run: aws sts get-caller-identity
 
-      - name: Build SAM application
+      - name: Build SAM Application
         run: sam build
 
       - name: Deploy CloudDesk
@@ -64,5 +64,11 @@ jobs:
           --stack-name clouddesk-backend
           --region "${{ vars.AWS_REGION }}"
           --capabilities CAPABILITY_IAM
+          --parameter-overrides
+          Environment=dev
+          DatabaseSecretArn="${{ vars.DATABASE_SECRET_ARN }}"
+          VpcId=vpc-0f5bbd66ff9fa24f8
+          RdsSecurityGroupId=sg-05dc391dd52d0d63b
+          LambdaSubnetIds="subnet-078f2418a092901fd,subnet-045b3b611cdf127b0"
           --no-confirm-changeset
           --no-fail-on-empty-changeset
