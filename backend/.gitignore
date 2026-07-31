@@ -241,4 +241,29 @@ $RECYCLE.BIN/
 
 */build/*
 
+# ==========================
+# Python
+# ==========================
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environments
+.venv/
+venv/
+
+# Pytest
+.pytest_cache/
+
+# Coverage
+.coverage
+htmlcov/
+
+# IDE
+.vscode/
+.idea/
+
+# macOS
+.DS_Store
+
 # End of https://www.gitignore.io/api/osx,linux,python,windows,pycharm,visualstudiocode

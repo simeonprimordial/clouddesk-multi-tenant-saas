@@ -1,0 +1,6 @@
+pytest==8.4.1
+pytest-cov==6.2.1
+pytest==8.4.1
+pytest-cov==6.2.1
+psycopg[binary]==3.3.4
+boto3
