@@ -1,0 +1,55 @@
+[tool.black]
+line-length = 88
+target-version = ["py313"]
+
+extend-exclude = '''
+(
+    \.aws-sam
+  | layers/shared/python/psycopg
+  | layers/shared/python/psycopg_binary
+  | layers/shared/python/psycopg_binary\.libs
+  | layers/shared/python/tzdata
+)
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 88
+
+skip_glob = [
+    ".aws-sam/*",
+    "layers/shared/python/psycopg/*",
+    "layers/shared/python/psycopg_binary/*",
+    "layers/shared/python/psycopg_binary.libs/*",
+    "layers/shared/python/tzdata/*",
+]
+
+[tool.ruff]
+line-length = 88
+target-version = "py313"
+
+extend-exclude = [
+    ".aws-sam",
+    "layers/shared/python/psycopg",
+    "layers/shared/python/psycopg_binary",
+    "layers/shared/python/psycopg_binary.libs",
+    "layers/shared/python/tzdata",
+    "htmlcov",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",
+    "F",
+    "I",
+    "B",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--strict-markers",
+]

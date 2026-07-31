@@ -1,0 +1,26 @@
+{
+  "version": "2.0",
+  "routeKey": "GET /health",
+  "rawPath": "/health",
+  "rawQueryString": "",
+  "headers": {
+    "accept": "application/json",
+    "host": "localhost",
+    "user-agent": "CloudDeskLocalTest"
+  },
+  "requestContext": {
+    "http": {
+      "method": "GET",
+      "path": "/health",
+      "protocol": "HTTP/1.1",
+      "sourceIp": "127.0.0.1",
+      "userAgent": "CloudDeskLocalTest"
+    },
+    "requestId": "local-health-test",
+    "routeKey": "GET /health",
+    "stage": "$default",
+    "time": "19/Jul/2026:08:30:00 +0000",
+    "timeEpoch": 1784459400000
+  },
+  "isBase64Encoded": false
+}

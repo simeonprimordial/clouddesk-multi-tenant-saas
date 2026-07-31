@@ -1,0 +1,33 @@
+version = 0.1
+
+[default.global.parameters]
+stack_name = "clouddesk-backend"
+region = "us-east-1"
+
+[default.build.parameters]
+cached = true
+parallel = true
+
+[default.validate.parameters]
+lint = true
+
+[default.deploy.parameters]
+capabilities = "CAPABILITY_IAM"
+confirm_changeset = true
+resolve_s3 = true
+stack_name = "clouddesk-backend"
+s3_prefix = "clouddesk-backend"
+parameter_overrides = "Environment=\"dev\" VpcId=\"vpc-0f5bbd66ff9fa24f8\" RdsSecurityGroupId=\"sg-05dc391dd52d0d63b\" LambdaSubnetIds=\"subnet-078f2418a092901fd,subnet-045b3b611cdf127b0\""
+image_repositories = []
+
+[default.package.parameters]
+resolve_s3 = true
+
+[default.sync.parameters]
+watch = true
+
+[default.local_start_api.parameters]
+warm_containers = "EAGER"
+
+[default.local_start_lambda.parameters]
+warm_containers = "EAGER"
