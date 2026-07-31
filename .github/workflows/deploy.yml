@@ -77,6 +77,20 @@ jobs:
           print("ref:", claims.get("ref"))
           PY
 
+
+      - name: Show OIDC subject claim
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const token = await core.getIDToken("sts.amazonaws.com");
+            const payload = JSON.parse(
+              Buffer.from(token.split(".")[1], "base64url").toString()
+            );
+
+            console.log("SUB:", payload.sub);
+            console.log("AUD:", payload.aud);
+
+
       - name: Configure AWS Credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v5
         with:
