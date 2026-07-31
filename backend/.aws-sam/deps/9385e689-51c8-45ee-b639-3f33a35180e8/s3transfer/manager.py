@@ -160,8 +160,8 @@ class TransferConfig:
                 and attr_val <= 0
             ):
                 raise ValueError(
-                    f'Provided parameter {attr} of value {attr_val} must '
-                    'be greater than 0.'
+                    f"Provided parameter {attr} of value {attr_val} must "
+                    "be greater than 0."
                 )
 
     def get_deep_attr(self, item):
@@ -172,70 +172,70 @@ class TransferManager:
     ALLOWED_DOWNLOAD_ARGS = ALLOWED_DOWNLOAD_ARGS
 
     _ALLOWED_SHARED_ARGS = [
-        'ACL',
-        'CacheControl',
-        'ChecksumAlgorithm',
-        'ContentDisposition',
-        'ContentEncoding',
-        'ContentLanguage',
-        'ContentType',
-        'ExpectedBucketOwner',
-        'Expires',
-        'GrantFullControl',
-        'GrantRead',
-        'GrantReadACP',
-        'GrantWriteACP',
-        'Metadata',
-        'ObjectLockLegalHoldStatus',
-        'ObjectLockMode',
-        'ObjectLockRetainUntilDate',
-        'RequestPayer',
-        'ServerSideEncryption',
-        'StorageClass',
-        'SSECustomerAlgorithm',
-        'SSECustomerKey',
-        'SSECustomerKeyMD5',
-        'SSEKMSKeyId',
-        'SSEKMSEncryptionContext',
-        'Tagging',
-        'WebsiteRedirectLocation',
+        "ACL",
+        "CacheControl",
+        "ChecksumAlgorithm",
+        "ContentDisposition",
+        "ContentEncoding",
+        "ContentLanguage",
+        "ContentType",
+        "ExpectedBucketOwner",
+        "Expires",
+        "GrantFullControl",
+        "GrantRead",
+        "GrantReadACP",
+        "GrantWriteACP",
+        "Metadata",
+        "ObjectLockLegalHoldStatus",
+        "ObjectLockMode",
+        "ObjectLockRetainUntilDate",
+        "RequestPayer",
+        "ServerSideEncryption",
+        "StorageClass",
+        "SSECustomerAlgorithm",
+        "SSECustomerKey",
+        "SSECustomerKeyMD5",
+        "SSEKMSKeyId",
+        "SSEKMSEncryptionContext",
+        "Tagging",
+        "WebsiteRedirectLocation",
     ]
 
     ALLOWED_UPLOAD_ARGS = (
         _ALLOWED_SHARED_ARGS
         + [
-            'ChecksumType',
-            'MpuObjectSize',
+            "ChecksumType",
+            "MpuObjectSize",
         ]
         + FULL_OBJECT_CHECKSUM_ARGS
     )
 
     ALLOWED_COPY_ARGS = _ALLOWED_SHARED_ARGS + [
-        'CopySourceIfMatch',
-        'CopySourceIfModifiedSince',
-        'CopySourceIfNoneMatch',
-        'CopySourceIfUnmodifiedSince',
-        'CopySourceSSECustomerAlgorithm',
-        'CopySourceSSECustomerKey',
-        'CopySourceSSECustomerKeyMD5',
-        'MetadataDirective',
-        'TaggingDirective',
-        'AnnotationDirective',
+        "CopySourceIfMatch",
+        "CopySourceIfModifiedSince",
+        "CopySourceIfNoneMatch",
+        "CopySourceIfUnmodifiedSince",
+        "CopySourceSSECustomerAlgorithm",
+        "CopySourceSSECustomerKey",
+        "CopySourceSSECustomerKeyMD5",
+        "MetadataDirective",
+        "TaggingDirective",
+        "AnnotationDirective",
     ]
 
     ALLOWED_DELETE_ARGS = [
-        'MFA',
-        'VersionId',
-        'RequestPayer',
-        'ExpectedBucketOwner',
+        "MFA",
+        "VersionId",
+        "RequestPayer",
+        "ExpectedBucketOwner",
     ]
 
     VALIDATE_SUPPORTED_BUCKET_VALUES = True
 
     _UNSUPPORTED_BUCKET_PATTERNS = {
-        'S3 Object Lambda': re.compile(
-            r'^arn:(aws).*:s3-object-lambda:[a-z\-0-9]+:[0-9]{12}:'
-            r'accesspoint[/:][a-zA-Z0-9\-]{1,63}'
+        "S3 Object Lambda": re.compile(
+            r"^arn:(aws).*:s3-object-lambda:[a-z\-0-9]+:[0-9]{12}:"
+            r"accesspoint[/:][a-zA-Z0-9\-]{1,63}"
         ),
     }
 
@@ -297,9 +297,7 @@ class TransferManager:
         # is configured.
         self._bandwidth_limiter = None
         if self._config.max_bandwidth is not None:
-            logger.debug(
-                'Setting max_bandwidth to %s', self._config.max_bandwidth
-            )
+            logger.debug("Setting max_bandwidth to %s", self._config.max_bandwidth)
             leaky_bucket = LeakyBucket(self._config.max_bandwidth)
             self._bandwidth_limiter = BandwidthLimiter(leaky_bucket)
 
@@ -355,14 +353,10 @@ class TransferManager:
         )
         extra_main_kwargs = {}
         if self._bandwidth_limiter:
-            extra_main_kwargs['bandwidth_limiter'] = self._bandwidth_limiter
-        return self._submit_transfer(
-            call_args, UploadSubmissionTask, extra_main_kwargs
-        )
+            extra_main_kwargs["bandwidth_limiter"] = self._bandwidth_limiter
+        return self._submit_transfer(call_args, UploadSubmissionTask, extra_main_kwargs)
 
-    def download(
-        self, bucket, key, fileobj, extra_args=None, subscribers=None
-    ):
+    def download(self, bucket, key, fileobj, extra_args=None, subscribers=None):
         """Downloads a file from S3
 
         :type bucket: str
@@ -401,9 +395,9 @@ class TransferManager:
             extra_args=extra_args,
             subscribers=subscribers,
         )
-        extra_main_kwargs = {'io_executor': self._io_executor}
+        extra_main_kwargs = {"io_executor": self._io_executor}
         if self._bandwidth_limiter:
-            extra_main_kwargs['bandwidth_limiter'] = self._bandwidth_limiter
+            extra_main_kwargs["bandwidth_limiter"] = self._bandwidth_limiter
         return self._submit_transfer(
             call_args, DownloadSubmissionTask, extra_main_kwargs
         )
@@ -462,20 +456,14 @@ class TransferManager:
         # ignored unless the corresponding directive is set to 'REPLACE'. The
         # warning surfaces this so callers don't get blindsided when their
         # input has no effect.
-        if (
-            extra_args.get('Metadata')
-            and extra_args.get('MetadataDirective') is None
-        ):
+        if extra_args.get("Metadata") and extra_args.get("MetadataDirective") is None:
             logger.warning(
                 "Metadata was supplied without a metadata directive. The "
                 "supplied metadata will be ignored and source metadata will "
                 "be preserved. Set the metadata directive to 'REPLACE' to "
                 "apply the supplied metadata."
             )
-        if (
-            extra_args.get('Tagging')
-            and extra_args.get('TaggingDirective') is None
-        ):
+        if extra_args.get("Tagging") and extra_args.get("TaggingDirective") is None:
             logger.warning(
                 "Tagging was supplied without a tagging directive. The "
                 "supplied tagging will be ignored and source tags will be "
@@ -484,7 +472,7 @@ class TransferManager:
             )
         self._validate_all_known_args(extra_args, self.ALLOWED_COPY_ARGS)
         if isinstance(copy_source, dict):
-            self._validate_if_bucket_supported(copy_source.get('Bucket'))
+            self._validate_if_bucket_supported(copy_source.get("Bucket"))
         self._validate_if_bucket_supported(bucket)
         call_args = CallArgs(
             copy_source=copy_source,
@@ -541,8 +529,8 @@ class TransferManager:
                 match = pattern.match(bucket)
                 if match:
                     raise ValueError(
-                        f'TransferManager methods do not support {resource} '
-                        'resource. Use direct client calls instead.'
+                        f"TransferManager methods do not support {resource} "
+                        "resource. Use direct client calls instead."
                     )
 
     def _validate_all_known_args(self, actual, allowed):
@@ -550,32 +538,25 @@ class TransferManager:
             if kwarg not in allowed:
                 raise ValueError(
                     "Invalid extra_args key '{}', must be one of: {}".format(
-                        kwarg, ', '.join(allowed)
+                        kwarg, ", ".join(allowed)
                     )
                 )
 
     def _add_operation_defaults(self, extra_args):
-        if (
-            self.client.meta.config.request_checksum_calculation
-            == "when_supported"
-        ):
+        if self.client.meta.config.request_checksum_calculation == "when_supported":
             set_default_checksum_algorithm(extra_args)
 
-    def _submit_transfer(
-        self, call_args, submission_task_cls, extra_main_kwargs=None
-    ):
+    def _submit_transfer(self, call_args, submission_task_cls, extra_main_kwargs=None):
         if not extra_main_kwargs:
             extra_main_kwargs = {}
 
         # Create a TransferFuture to return back to the user
-        transfer_future, components = self._get_future_with_components(
-            call_args
-        )
+        transfer_future, components = self._get_future_with_components(call_args)
 
         # Add any provided done callbacks to the created transfer future
         # to be invoked on the transfer future being complete.
-        for callback in get_callbacks(transfer_future, 'done'):
-            components['coordinator'].add_done_callback(callback)
+        for callback in get_callbacks(transfer_future, "done"):
+            components["coordinator"].add_done_callback(callback)
 
         # Get the main kwargs needed to instantiate the submission task
         main_kwargs = self._get_submission_task_main_kwargs(
@@ -586,7 +567,7 @@ class TransferManager:
         # tasks needed to complete the S3 transfer.
         self._submission_executor.submit(
             submission_task_cls(
-                transfer_coordinator=components['coordinator'],
+                transfer_coordinator=components["coordinator"],
                 main_kwargs=main_kwargs,
             )
         )
@@ -601,9 +582,7 @@ class TransferManager:
         # Creates a new transfer future along with its components
         transfer_coordinator = TransferCoordinator(transfer_id=transfer_id)
         # Track the transfer coordinator for transfers to manage.
-        self._coordinator_controller.add_transfer_coordinator(
-            transfer_coordinator
-        )
+        self._coordinator_controller.add_transfer_coordinator(transfer_coordinator)
         # Also make sure that the transfer coordinator is removed once
         # the transfer completes so it does not stick around in memory.
         transfer_coordinator.add_done_callback(
@@ -611,35 +590,33 @@ class TransferManager:
             transfer_coordinator,
         )
         components = {
-            'meta': TransferMeta(call_args, transfer_id=transfer_id),
-            'coordinator': transfer_coordinator,
+            "meta": TransferMeta(call_args, transfer_id=transfer_id),
+            "coordinator": transfer_coordinator,
         }
         transfer_future = TransferFuture(**components)
         return transfer_future, components
 
-    def _get_submission_task_main_kwargs(
-        self, transfer_future, extra_main_kwargs
-    ):
+    def _get_submission_task_main_kwargs(self, transfer_future, extra_main_kwargs):
         main_kwargs = {
-            'client': self._client,
-            'config': self._config,
-            'osutil': self._osutil,
-            'request_executor': self._request_executor,
-            'transfer_future': transfer_future,
+            "client": self._client,
+            "config": self._config,
+            "osutil": self._osutil,
+            "request_executor": self._request_executor,
+            "transfer_future": transfer_future,
         }
         main_kwargs.update(extra_main_kwargs)
         return main_kwargs
 
     def _register_handlers(self):
         # Register handlers to enable/disable callbacks on uploads.
-        event_name = 'request-created.s3'
+        event_name = "request-created.s3"
         self._client.meta.events.register_first(
             event_name,
             signal_not_transferring,
-            unique_id='s3upload-not-transferring',
+            unique_id="s3upload-not-transferring",
         )
         self._client.meta.events.register_last(
-            event_name, signal_transferring, unique_id='s3upload-transferring'
+            event_name, signal_transferring, unique_id="s3upload-transferring"
         )
 
     def __enter__(self):
@@ -647,7 +624,7 @@ class TransferManager:
 
     def __exit__(self, exc_type, exc_value, *args):
         cancel = False
-        cancel_msg = ''
+        cancel_msg = ""
         cancel_exc_type = FatalError
         # If a exception was raised in the context handler, signal to cancel
         # all of the inprogress futures in the shutdown.
@@ -662,7 +639,7 @@ class TransferManager:
                 cancel_exc_type = CancelledError
         self._shutdown(cancel, cancel_msg, cancel_exc_type)
 
-    def shutdown(self, cancel=False, cancel_msg=''):
+    def shutdown(self, cancel=False, cancel_msg=""):
         """Shutdown the TransferManager
 
         It will wait till all transfers complete before it completely shuts
@@ -695,7 +672,7 @@ class TransferManager:
             # an error raised in the try statement we want to cancel all of
             # the inflight transfers before shutting down to speed that
             # process up.
-            self._coordinator_controller.cancel('KeyboardInterrupt()')
+            self._coordinator_controller.cancel("KeyboardInterrupt()")
             raise
         finally:
             # Shutdown all of the executors.
@@ -746,7 +723,7 @@ class TransferCoordinatorController:
         with self._lock:
             self._tracked_transfer_coordinators.remove(transfer_coordinator)
 
-    def cancel(self, msg='', exc_type=CancelledError):
+    def cancel(self, msg="", exc_type=CancelledError):
         """Cancels all inprogress transfers
 
         This cancels the inprogress transfers by calling cancel() on all
@@ -772,13 +749,13 @@ class TransferCoordinatorController:
             for transfer_coordinator in self.tracked_transfer_coordinators:
                 transfer_coordinator.result()
         except KeyboardInterrupt:
-            logger.debug('Received KeyboardInterrupt in wait()')
+            logger.debug("Received KeyboardInterrupt in wait()")
             # If Keyboard interrupt is raised while waiting for
             # the result, then exit out of the wait and raise the
             # exception
             if transfer_coordinator:
                 logger.debug(
-                    'On KeyboardInterrupt was waiting for %s',
+                    "On KeyboardInterrupt was waiting for %s",
                     transfer_coordinator,
                 )
             raise

@@ -5,7 +5,6 @@ from unittest.mock import patch
 
 from add_member.handler import lambda_handler
 
-
 CURRENT_USER = {
     "id": "owner-123",
     "status": "active",
@@ -78,9 +77,7 @@ def test_add_member_success(
         current_user=CURRENT_USER,
     )
 
-    mock_get_user_by_email.assert_called_once_with(
-        "member@example.com"
-    )
+    mock_get_user_by_email.assert_called_once_with("member@example.com")
 
 
 @patch("add_member.handler.get_current_user")
@@ -90,17 +87,13 @@ def test_add_member_requires_tenant_id(mock_get_current_user):
     response = lambda_handler(
         {
             "pathParameters": {},
-            "body": json.dumps(
-                {"email": "member@example.com"}
-            ),
+            "body": json.dumps({"email": "member@example.com"}),
         },
         None,
     )
 
     assert response["statusCode"] == 400
-    assert response_body(response)["message"] == (
-        "Tenant ID is required."
-    )
+    assert response_body(response)["message"] == ("Tenant ID is required.")
 
 
 @patch("add_member.handler.require_admin")

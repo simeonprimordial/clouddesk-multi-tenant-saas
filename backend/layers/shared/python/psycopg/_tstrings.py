@@ -11,8 +11,8 @@ from typing import Any
 from . import abc
 from . import errors as e
 from . import sql
-from ._enums import PyFormat
 from ._compat import Interpolation, Template
+from ._enums import PyFormat
 from ._transformer import Transformer
 
 # Formats supported by template strings

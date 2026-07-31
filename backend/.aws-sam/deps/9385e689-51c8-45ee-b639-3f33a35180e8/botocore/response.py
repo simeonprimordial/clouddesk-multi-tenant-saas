@@ -15,15 +15,12 @@
 import logging
 from io import IOBase
 
-from urllib3.exceptions import ProtocolError as URLLib3ProtocolError
-from urllib3.exceptions import ReadTimeoutError as URLLib3ReadTimeoutError
-
+from botocore import ScalarTypes  # noqa: F401
 from botocore import (
-    ScalarTypes,  # noqa: F401
     parsers,
 )
+from botocore.compat import XMLParseError  # noqa: F401
 from botocore.compat import (
-    XMLParseError,  # noqa: F401
     set_socket_timeout,
 )
 from botocore.exceptions import (
@@ -32,6 +29,8 @@ from botocore.exceptions import (
     ResponseStreamingError,
 )
 from botocore.hooks import first_non_none_response  # noqa
+from urllib3.exceptions import ProtocolError as URLLib3ProtocolError
+from urllib3.exceptions import ReadTimeoutError as URLLib3ReadTimeoutError
 
 logger = logging.getLogger(__name__)
 
@@ -153,7 +152,7 @@ class StreamingBody(IOBase):
         This is achieved by reading chunk of bytes (of size chunk_size) at a
         time from the raw stream, and then yielding lines from there.
         """
-        pending = b''
+        pending = b""
         for chunk in self.iter_chunks(chunk_size):
             lines = (pending + chunk).splitlines(True)
             for line in lines[:-1]:
@@ -195,22 +194,20 @@ class StreamingBody(IOBase):
 def get_response(operation_model, http_response):
     protocol = operation_model.service_model.resolved_protocol
     response_dict = {
-        'headers': http_response.headers,
-        'status_code': http_response.status_code,
+        "headers": http_response.headers,
+        "status_code": http_response.status_code,
     }
     # TODO: Unfortunately, we have to have error logic here.
     # If it looks like an error, in the streaming response case we
     # need to actually grab the contents.
-    if response_dict['status_code'] >= 300:
-        response_dict['body'] = http_response.content
+    if response_dict["status_code"] >= 300:
+        response_dict["body"] = http_response.content
     elif operation_model.has_streaming_output:
-        response_dict['body'] = StreamingBody(
-            http_response.raw, response_dict['headers'].get('content-length')
+        response_dict["body"] = StreamingBody(
+            http_response.raw, response_dict["headers"].get("content-length")
         )
     else:
-        response_dict['body'] = http_response.content
+        response_dict["body"] = http_response.content
 
     parser = parsers.create_parser(protocol)
-    return http_response, parser.parse(
-        response_dict, operation_model.output_shape
-    )
+    return http_response, parser.parse(response_dict, operation_model.output_shape)

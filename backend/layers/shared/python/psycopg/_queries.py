@@ -7,16 +7,16 @@ Utility module to manipulate queries
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Any, NamedTuple, TypeAlias, TypeGuard
-from functools import lru_cache
 from collections.abc import Callable, Mapping, Sequence
+from functools import lru_cache
+from typing import TYPE_CHECKING, Any, NamedTuple, TypeAlias, TypeGuard
 
 from . import errors as e
 from . import pq, sql
-from .abc import Buffer, Params, Query, QueryNoTemplate
-from ._enums import PyFormat
 from ._compat import Template
+from ._enums import PyFormat
 from ._tstrings import TemplateProcessor
+from .abc import Buffer, Params, Query, QueryNoTemplate
 
 if TYPE_CHECKING:
     from .abc import Transformer
@@ -360,7 +360,8 @@ def _query2pg_client_nocache(
 _query2pg_client = lru_cache(_query2pg_client_nocache)
 
 
-_re_placeholder = re.compile(rb"""(?x)
+_re_placeholder = re.compile(
+    rb"""(?x)
         %                       # a literal %
         (?:
             (?:
@@ -370,7 +371,8 @@ _re_placeholder = re.compile(rb"""(?x)
             |
             (?:.)               # or any char, really
         )
-        """)
+        """
+)
 
 
 def _split_query(

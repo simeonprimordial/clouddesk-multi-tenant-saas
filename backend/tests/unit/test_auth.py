@@ -3,7 +3,6 @@
 from unittest.mock import patch
 
 import pytest
-
 from shared.auth import (
     AuthenticationError,
     get_authenticated_identity,
@@ -66,9 +65,7 @@ def test_get_jwt_claims_rejects_invalid_claim_format():
 
 
 def test_get_authenticated_identity_returns_expected_values():
-    identity = get_authenticated_identity(
-        create_authenticated_event()
-    )
+    identity = get_authenticated_identity(create_authenticated_event())
 
     assert identity == {
         "cognito_sub": "cognito-user-123",
@@ -105,9 +102,7 @@ def test_get_current_user_returns_active_user(
     assert user["id"] == "user-123"
     assert user["status"] == "active"
 
-    mock_get_user_by_cognito_sub.assert_called_once_with(
-        "cognito-user-123"
-    )
+    mock_get_user_by_cognito_sub.assert_called_once_with("cognito-user-123")
 
 
 @patch("shared.auth.get_user_by_cognito_sub")

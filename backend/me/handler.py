@@ -2,19 +2,13 @@
 Return the authenticated CloudDesk user's profile.
 """
 
-from shared.serialization import serialize_dict
-from typing import Any
-
-
 from shared.auth import (
     AuthenticationError,
     AuthorizationError,
     get_current_user,
 )
 from shared.response import error, success
-
-
-
+from shared.serialization import serialize_dict
 
 
 def lambda_handler(event, context):

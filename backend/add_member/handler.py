@@ -20,7 +20,6 @@ from shared.db import (
 from shared.response import error, success
 from shared.serialization import serialize_dict
 
-
 ALLOWED_ROLES = {
     "admin",
     "member",
@@ -33,10 +32,7 @@ def lambda_handler(event, context):
     try:
         current_user = get_current_user(event)
 
-        tenant_id = (
-            event.get("pathParameters", {})
-            .get("tenantId")
-        )
+        tenant_id = event.get("pathParameters", {}).get("tenantId")
 
         if not tenant_id:
             return error(

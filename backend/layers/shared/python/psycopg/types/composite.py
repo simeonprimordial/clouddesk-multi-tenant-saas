@@ -6,22 +6,29 @@ Support for composite types adaptation.
 
 from __future__ import annotations
 
+import logging
 import re
 import struct
-import logging
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, Generic, NamedTuple, TypeAlias, TypeVar, cast
-from functools import cache
 from collections import namedtuple
 from collections.abc import Callable, Sequence
+from functools import cache
+from typing import TYPE_CHECKING, Any, Generic, NamedTuple, TypeAlias, TypeVar, cast
 
 from .. import abc, postgres, pq, sql
+from .._encodings import _as_python_identifier
 from .._oids import TEXT_OID
-from ..adapt import Buffer, Dumper, Loader, PyFormat, RecursiveDumper, RecursiveLoader
-from ..adapt import Transformer
 from .._struct import pack_len, unpack_len
 from .._typeinfo import TypeInfo
-from .._encodings import _as_python_identifier
+from ..adapt import (
+    Buffer,
+    Dumper,
+    Loader,
+    PyFormat,
+    RecursiveDumper,
+    RecursiveLoader,
+    Transformer,
+)
 
 if TYPE_CHECKING:
     from .._connection_base import BaseConnection
@@ -63,7 +70,8 @@ class CompositeInfo(TypeInfo):
 
     @classmethod
     def _get_info_query(cls, conn: BaseConnection[Any]) -> abc.QueryNoTemplate:
-        return sql.SQL("""\
+        return sql.SQL(
+            """\
 SELECT
     t.typname AS name, t.oid AS oid, t.typarray AS array_oid,
     t.oid::regtype::text AS regtype,
@@ -87,7 +95,8 @@ LEFT JOIN (
     GROUP BY attrelid
 ) a ON a.attrelid = t.typrelid
 WHERE t.oid = {regtype}
-""").format(regtype=cls._to_regtype(conn))
+"""
+        ).format(regtype=cls._to_regtype(conn))
 
 
 class TupleDumper(RecursiveDumper):
@@ -472,11 +481,13 @@ def _parse_text_record(data: abc.Buffer) -> list[bytes | None]:
     return record
 
 
-_re_tokenize = re.compile(rb"""(?x)
+_re_tokenize = re.compile(
+    rb"""(?x)
       (,)                       # an empty token, representing NULL
     | " ((?: [^"] | "")*) " ,?  # or a quoted string
     | ([^",)]+) ,?              # or an unquoted string
-    """)
+    """
+)
 _re_undouble = re.compile(rb'(["\\])\1')
 
 

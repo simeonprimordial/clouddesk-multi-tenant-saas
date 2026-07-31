@@ -49,9 +49,7 @@ def test_serialize_regular_value_unchanged():
 
 
 def test_serialize_dict():
-    tenant_id = UUID(
-        "b763fbb4-8fe3-4198-a69b-990a1e35b92c"
-    )
+    tenant_id = UUID("b763fbb4-8fe3-4198-a69b-990a1e35b92c")
 
     result = serialize_dict(
         {
@@ -71,15 +69,11 @@ def test_serialize_dict():
 def test_serialize_list():
     rows = [
         {
-            "id": UUID(
-                "b763fbb4-8fe3-4198-a69b-990a1e35b92c"
-            ),
+            "id": UUID("b763fbb4-8fe3-4198-a69b-990a1e35b92c"),
             "name": "NovaTech",
         },
         {
-            "id": UUID(
-                "716f39f8-6ec8-46c1-a8a9-e430a1f67310"
-            ),
+            "id": UUID("716f39f8-6ec8-46c1-a8a9-e430a1f67310"),
             "name": "FinTrust",
         },
     ]

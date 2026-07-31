@@ -9,20 +9,20 @@ information to the adapters if needed.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, TypeAlias, overload
 from collections.abc import Iterator, Sequence
+from typing import TYPE_CHECKING, Any, TypeAlias, overload
 
 from . import errors as e
 from . import sql
+from ._compat import TypeVar
+from ._encodings import conn_encoding
+from ._typemod import TypeModifier
 from .abc import AdaptContext, QueryNoTemplate
 from .rows import dict_row
-from ._compat import TypeVar
-from ._typemod import TypeModifier
-from ._encodings import conn_encoding
 
 if TYPE_CHECKING:
-    from .connection import Connection
     from ._connection_base import BaseConnection
+    from .connection import Connection
     from .connection_async import AsyncConnection
 
 T = TypeVar("T", bound="TypeInfo")
@@ -158,14 +158,16 @@ class TypeInfo:
 
     @classmethod
     def _get_info_query(cls, conn: BaseConnection[Any]) -> QueryNoTemplate:
-        return sql.SQL("""\
+        return sql.SQL(
+            """\
 SELECT
     typname AS name, oid, typarray AS array_oid,
     oid::regtype::text AS regtype, typdelim AS delimiter
 FROM pg_type t
 WHERE t.oid = {regtype}
 ORDER BY t.oid
-""").format(regtype=cls._to_regtype(conn))
+"""
+        ).format(regtype=cls._to_regtype(conn))
 
     @classmethod
     def _has_to_regtype_function(cls, conn: BaseConnection[Any]) -> bool:

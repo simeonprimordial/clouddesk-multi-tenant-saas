@@ -19,7 +19,6 @@ from shared.db import (
 from shared.response import error, success
 from shared.serialization import serialize_dict
 
-
 ALLOWED_ROLES = {
     "admin",
     "member",

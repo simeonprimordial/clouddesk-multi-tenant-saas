@@ -9,13 +9,13 @@ information. Will submit a bug.
 
 from __future__ import annotations
 
-from typing import Any, Sequence
 from collections import deque
+from typing import Any, Sequence
 
 from psycopg import BaseConnection, abc, pq
-from psycopg.rows import Row, RowMaker
 from psycopg.adapt import AdaptersMap, PyFormat
 from psycopg.pq.abc import PGcancelConn, PGconn, PGresult
+from psycopg.rows import Row, RowMaker
 
 class Transformer(abc.AdaptContext):
     types: tuple[int, ...] | None

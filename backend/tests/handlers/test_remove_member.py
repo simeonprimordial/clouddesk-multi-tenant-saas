@@ -5,7 +5,6 @@ from unittest.mock import patch
 
 from remove_member.handler import lambda_handler
 
-
 CURRENT_USER = {
     "id": "owner-123",
     "status": "active",
@@ -87,9 +86,7 @@ def test_remove_member_rejects_missing_member(
     )
 
     assert response["statusCode"] == 404
-    assert response_body(response)["message"] == (
-        "Tenant member not found."
-    )
+    assert response_body(response)["message"] == ("Tenant member not found.")
 
 
 @patch("remove_member.handler.get_tenant_member")
@@ -114,9 +111,7 @@ def test_remove_member_protects_tenant_owner(
     )
 
     assert response["statusCode"] == 400
-    assert response_body(response)["message"] == (
-        "The tenant owner cannot be removed."
-    )
+    assert response_body(response)["message"] == ("The tenant owner cannot be removed.")
 
 
 @patch("remove_member.handler.get_tenant_member")

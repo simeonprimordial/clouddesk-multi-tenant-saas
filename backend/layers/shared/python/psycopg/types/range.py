@@ -7,22 +7,29 @@ Support for range types adaptation.
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Any, Generic, cast
-from decimal import Decimal
 from datetime import date, datetime
+from decimal import Decimal
 from functools import cache
+from typing import TYPE_CHECKING, Any, Generic, cast
 
 from .. import _oids
 from .. import errors as e
 from .. import postgres, sql
-from ..pq import Format
-from ..abc import AdaptContext, Buffer, Dumper, DumperKey, DumpFunc, LoadFunc
-from ..abc import QueryNoTemplate
-from .._oids import INVALID_OID, TEXT_OID
-from ..adapt import PyFormat, RecursiveDumper, RecursiveLoader
 from .._compat import TypeVar
+from .._oids import INVALID_OID, TEXT_OID
 from .._struct import pack_len, unpack_len
 from .._typeinfo import TypeInfo, TypesRegistry
+from ..abc import (
+    AdaptContext,
+    Buffer,
+    Dumper,
+    DumperKey,
+    DumpFunc,
+    LoadFunc,
+    QueryNoTemplate,
+)
+from ..adapt import PyFormat, RecursiveDumper, RecursiveLoader
+from ..pq import Format
 
 if TYPE_CHECKING:
     from .._connection_base import BaseConnection
@@ -55,14 +62,16 @@ class RangeInfo(TypeInfo):
 
     @classmethod
     def _get_info_query(cls, conn: BaseConnection[Any]) -> QueryNoTemplate:
-        return sql.SQL("""\
+        return sql.SQL(
+            """\
 SELECT t.typname AS name, t.oid AS oid, t.typarray AS array_oid,
     t.oid::regtype::text AS regtype,
     r.rngsubtype AS subtype_oid
 FROM pg_type t
 JOIN pg_range r ON t.oid = r.rngtypid
 WHERE t.oid = {regtype}
-""").format(regtype=cls._to_regtype(conn))
+"""
+        ).format(regtype=cls._to_regtype(conn))
 
     def _added(self, registry: TypesRegistry) -> None:
         # Map ranges subtypes to info

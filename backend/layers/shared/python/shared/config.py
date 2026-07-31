@@ -27,12 +27,10 @@ class Config:
     COGNITO_APP_CLIENT_ID = os.getenv("COGNITO_APP_CLIENT_ID")
 
     COGNITO_ISSUER = (
-        f"https://cognito-idp.{AWS_REGION}.amazonaws.com/"
-        f"{COGNITO_USER_POOL_ID}"
+        f"https://cognito-idp.{AWS_REGION}.amazonaws.com/" f"{COGNITO_USER_POOL_ID}"
         if COGNITO_USER_POOL_ID
         else None
     )
 
 
 config = Config()
-

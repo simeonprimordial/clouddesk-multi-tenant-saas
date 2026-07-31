@@ -4,9 +4,6 @@ Create a new CloudDesk tenant for the authenticated user.
 
 import json
 import re
-from shared.serialization import serialize_dict
-from typing import Any
-
 
 from shared.auth import (
     AuthenticationError,
@@ -18,8 +15,7 @@ from shared.db import (
     get_tenant_by_slug,
 )
 from shared.response import error, success
-
-
+from shared.serialization import serialize_dict
 
 
 def create_slug(name: str) -> str:

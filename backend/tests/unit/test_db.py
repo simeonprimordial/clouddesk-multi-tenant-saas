@@ -4,7 +4,6 @@ from unittest.mock import MagicMock, patch
 
 import psycopg
 import pytest
-
 import shared.db as db
 from shared.db import (
     DatabaseConnectionError,
@@ -25,7 +24,6 @@ from shared.db import (
     get_user_by_email,
     update_tenant_member_role,
 )
-
 
 DATABASE_SECRET = {
     "host": "database.example.com",
@@ -233,9 +231,7 @@ def test_create_user_normalizes_input(
         "email": "member@example.com",
     }
 
-    connection, cursor = create_mock_connection(
-        fetchone=created_user
-    )
+    connection, cursor = create_mock_connection(fetchone=created_user)
 
     transaction_context = MagicMock()
     transaction_context.__enter__.return_value = connection
@@ -336,9 +332,7 @@ def test_create_tenant_with_owner_rolls_back_on_failure(
 ):
     connection, cursor = create_mock_connection()
 
-    cursor.execute.side_effect = RuntimeError(
-        "membership insert failed"
-    )
+    cursor.execute.side_effect = RuntimeError("membership insert failed")
 
     mock_get_connection.return_value = connection
 
@@ -444,9 +438,7 @@ def test_create_tenant_membership_commits(
         "role": "member",
     }
 
-    connection, cursor = create_mock_connection(
-        fetchone=membership
-    )
+    connection, cursor = create_mock_connection(fetchone=membership)
 
     mock_get_connection.return_value = connection
 
@@ -477,9 +469,7 @@ def test_update_tenant_member_role_commits(
         "role": "admin",
     }
 
-    connection, cursor = create_mock_connection(
-        fetchone=updated_membership
-    )
+    connection, cursor = create_mock_connection(fetchone=updated_membership)
 
     mock_get_connection.return_value = connection
 
@@ -510,9 +500,7 @@ def test_deactivate_tenant_member_commits(
         "status": "inactive",
     }
 
-    connection, cursor = create_mock_connection(
-        fetchone=deactivated_membership
-    )
+    connection, cursor = create_mock_connection(fetchone=deactivated_membership)
 
     mock_get_connection.return_value = connection
 

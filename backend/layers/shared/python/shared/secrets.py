@@ -46,9 +46,7 @@ def get_database_secret() -> dict[str, Any]:
         )
 
     try:
-        response = secrets_client.get_secret_value(
-            SecretId=config.DATABASE_SECRET_ARN
-        )
+        response = secrets_client.get_secret_value(SecretId=config.DATABASE_SECRET_ARN)
     except (ClientError, BotoCoreError) as error:
         logger.exception("Failed to retrieve the database secret")
         raise SecretConfigurationError(

@@ -3,15 +3,9 @@
 import sys
 from pathlib import Path
 
-
 BACKEND_DIRECTORY = Path(__file__).resolve().parents[1]
 
-SHARED_LAYER_DIRECTORY = (
-    BACKEND_DIRECTORY
-    / "layers"
-    / "shared"
-    / "python"
-)
+SHARED_LAYER_DIRECTORY = BACKEND_DIRECTORY / "layers" / "shared" / "python"
 
 
 # Lambda handler directories should be importable.

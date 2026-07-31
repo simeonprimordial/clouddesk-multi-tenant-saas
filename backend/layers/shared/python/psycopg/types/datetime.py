@@ -8,17 +8,17 @@ from __future__ import annotations
 
 import re
 import struct
-from typing import TYPE_CHECKING, Any, cast
-from datetime import date, datetime, time, timedelta, timezone
 from collections.abc import Callable
+from datetime import date, datetime, time, timedelta, timezone
+from typing import TYPE_CHECKING, Any, cast
 
 from .. import _oids
-from ..pq import Format
+from .._struct import pack_int4, pack_int8, unpack_int4, unpack_int8
 from .._tz import get_tzinfo
 from ..abc import AdaptContext, DumperKey
 from ..adapt import Buffer, Dumper, Loader, PyFormat
 from ..errors import DataError, InterfaceError
-from .._struct import pack_int4, pack_int8, unpack_int4, unpack_int8
+from ..pq import Format
 
 if TYPE_CHECKING:
     from .._connection_base import BaseConnection
@@ -325,12 +325,14 @@ class TimeBinaryLoader(Loader):
 
 
 class TimetzLoader(Loader):
-    _re_format = re.compile(rb"""(?ix)
+    _re_format = re.compile(
+        rb"""(?ix)
         ^
         (\d+) : (\d+) : (\d+) (?: \. (\d+) )?       # Time and micros
         ([-+]) (\d+) (?: : (\d+) )? (?: : (\d+) )?  # Timezone
         $
-        """)
+        """
+    )
 
     def load(self, data: Buffer) -> time:
         if not (m := self._re_format.match(data)):
@@ -379,15 +381,18 @@ class TimetzBinaryLoader(Loader):
 
 
 class TimestampLoader(Loader):
-    _re_format = re.compile(rb"""(?ix)
+    _re_format = re.compile(
+        rb"""(?ix)
         ^
         (\d+) [^a-z0-9] (\d+) [^a-z0-9] (\d+)   # Date
         (?: T | [^a-z0-9] )                     # Separator, including T
         (\d+) [^a-z0-9] (\d+) [^a-z0-9] (\d+)   # Time
         (?: \.(\d+) )?                          # Micros
         $
-        """)
-    _re_format_pg = re.compile(rb"""(?ix)
+        """
+    )
+    _re_format_pg = re.compile(
+        rb"""(?ix)
         ^
         [a-z]+          [^a-z0-9]               # DoW, separator
         (\d+|[a-z]+)    [^a-z0-9]               # Month or day
@@ -396,7 +401,8 @@ class TimestampLoader(Loader):
         (?: \.(\d+) )?                          # Micros
         [^a-z0-9] (\d+)                         # Year
         $
-        """)
+        """
+    )
 
     _ORDER_YMD = 0
     _ORDER_DMY = 1
@@ -471,7 +477,8 @@ class TimestampBinaryLoader(Loader):
 
 
 class TimestamptzLoader(Loader):
-    _re_format = re.compile(rb"""(?ix)
+    _re_format = re.compile(
+        rb"""(?ix)
         ^
         (\d+) [^a-z0-9] (\d+) [^a-z0-9] (\d+)       # Date
         (?: T | [^a-z0-9] )                         # Separator, including T
@@ -479,7 +486,8 @@ class TimestamptzLoader(Loader):
         (?: \.(\d+) )?                              # Micros
         ([-+]) (\d+) (?: : (\d+) )? (?: : (\d+) )?  # Timezone
         $
-        """)
+        """
+    )
 
     def __init__(self, oid: int, context: AdaptContext | None = None):
         super().__init__(oid, context)

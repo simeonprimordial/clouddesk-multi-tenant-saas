@@ -6,23 +6,30 @@ Support for multirange types adaptation.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Generic, overload
-from decimal import Decimal
-from datetime import date, datetime
-from functools import cache
 from collections.abc import Iterable, MutableSequence
+from datetime import date, datetime
+from decimal import Decimal
+from functools import cache
+from typing import TYPE_CHECKING, Any, Generic, overload
 
 from .. import _oids
 from .. import errors as e
 from .. import postgres, sql
-from ..pq import Format
-from ..abc import AdaptContext, Buffer, Dumper, DumperKey, QueryNoTemplate
-from .range import Range, T, dump_range_binary, dump_range_text, fail_dump
-from .range import load_range_binary, load_range_text
 from .._oids import INVALID_OID, TEXT_OID
-from ..adapt import PyFormat, RecursiveDumper, RecursiveLoader
 from .._struct import pack_len, unpack_len
 from .._typeinfo import TypeInfo, TypesRegistry
+from ..abc import AdaptContext, Buffer, Dumper, DumperKey, QueryNoTemplate
+from ..adapt import PyFormat, RecursiveDumper, RecursiveLoader
+from ..pq import Format
+from .range import (
+    Range,
+    T,
+    dump_range_binary,
+    dump_range_text,
+    fail_dump,
+    load_range_binary,
+    load_range_text,
+)
 
 if TYPE_CHECKING:
     from .._connection_base import BaseConnection
@@ -51,14 +58,16 @@ class MultirangeInfo(TypeInfo):
             raise e.NotSupportedError(
                 "multirange types are only available from PostgreSQL 14"
             )
-        return sql.SQL("""\
+        return sql.SQL(
+            """\
 SELECT t.typname AS name, t.oid AS oid, t.typarray AS array_oid,
     t.oid::regtype::text AS regtype,
     r.rngtypid AS range_oid, r.rngsubtype AS subtype_oid
 FROM pg_type t
 JOIN pg_range r ON t.oid = r.rngmultitypid
 WHERE t.oid = {regtype}
-""").format(regtype=cls._to_regtype(conn))
+"""
+        ).format(regtype=cls._to_regtype(conn))
 
     def _added(self, registry: TypesRegistry) -> None:
         # Map multiranges ranges and subtypes to info

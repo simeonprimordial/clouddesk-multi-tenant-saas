@@ -28,12 +28,12 @@ def get_resource_ignore_params(params):
         current = result.parsed
         # Use JMESPath to find the left most element in the target expression
         # which will be the parameter to ignore in the action call.
-        while current['children']:
-            current = current['children'][0]
+        while current["children"]:
+            current = current["children"][0]
         # Make sure the parameter we are about to ignore is a field.
         # If it is not, we should ignore the result to avoid false positives.
-        if current['type'] == 'field':
-            ignore_params.append(current['value'])
+        if current["type"] == "field":
+            ignore_params.append(current["value"])
     return ignore_params
 
 
@@ -45,32 +45,29 @@ def get_resource_public_actions(resource_class):
     resource_class_members = inspect.getmembers(resource_class)
     resource_methods = {}
     for name, member in resource_class_members:
-        if not name.startswith('_'):
+        if not name.startswith("_"):
             if not name[0].isupper():
-                if not name.startswith('wait_until'):
+                if not name.startswith("wait_until"):
                     if is_resource_action(member):
                         resource_methods[name] = member
     return resource_methods
 
 
 def get_identifier_values_for_example(identifier_names):
-    return ','.join([f'\'{identifier}\'' for identifier in identifier_names])
+    return ",".join([f"'{identifier}'" for identifier in identifier_names])
 
 
 def get_identifier_args_for_signature(identifier_names):
-    return ','.join(identifier_names)
+    return ",".join(identifier_names)
 
 
 def get_identifier_description(resource_name, identifier_name):
     return (
-        f"The {resource_name}'s {identifier_name} identifier. "
-        f"This **must** be set."
+        f"The {resource_name}'s {identifier_name} identifier. " f"This **must** be set."
     )
 
 
-def add_resource_type_overview(
-    section, resource_type, description, intro_link=None
-):
+def add_resource_type_overview(section, resource_type, description, intro_link=None):
     section.style.new_line()
     section.style.h3(resource_type)
     section.style.new_line()
@@ -79,7 +76,7 @@ def add_resource_type_overview(
     section.style.new_line()
     if intro_link is not None:
         section.write(
-            f'For more information about {resource_type.lower()} refer to the '
-            f':ref:`Resources Introduction Guide<{intro_link}>`.'
+            f"For more information about {resource_type.lower()} refer to the "
+            f":ref:`Resources Introduction Guide<{intro_link}>`."
         )
         section.style.new_line()

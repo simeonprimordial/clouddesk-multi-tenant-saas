@@ -26,10 +26,7 @@ def serialize_value(value: Any) -> Any:
 def serialize_dict(data: dict[str, Any]) -> dict[str, Any]:
     """Serialize every value in a dictionary."""
 
-    return {
-        key: serialize_value(value)
-        for key, value in data.items()
-    }
+    return {key: serialize_value(value) for key, value in data.items()}
 
 
 def serialize_list(
@@ -37,7 +34,4 @@ def serialize_list(
 ) -> list[dict[str, Any]]:
     """Serialize every dictionary in a list."""
 
-    return [
-        serialize_dict(row)
-        for row in rows
-    ]
+    return [serialize_dict(row) for row in rows]

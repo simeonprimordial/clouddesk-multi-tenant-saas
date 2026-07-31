@@ -5,12 +5,10 @@ from unittest.mock import patch
 
 import pytest
 from botocore.exceptions import BotoCoreError, ClientError
-
 from shared.secrets import (
     SecretConfigurationError,
     get_database_secret,
 )
-
 
 VALID_SECRET = {
     "host": "clouddesk-db.example.us-east-1.rds.amazonaws.com",
@@ -59,9 +57,7 @@ def test_get_database_secret_returns_validated_secret(
     assert secret["dbname"] == "clouddesk"
     assert secret["port"] == 5432
 
-    mock_secrets_client.get_secret_value.assert_called_once_with(
-        SecretId="secret-arn"
-    )
+    mock_secrets_client.get_secret_value.assert_called_once_with(SecretId="secret-arn")
 
 
 @patch("shared.secrets.secrets_client")

@@ -6,23 +6,23 @@ Psycopg BaseCursor object
 
 from __future__ import annotations
 
+from collections.abc import Iterable, Sequence
+from functools import partial
 from typing import TYPE_CHECKING, Any, Generic, NoReturn
 from weakref import ReferenceType, ref
-from functools import partial
-from collections.abc import Iterable, Sequence
 
 from . import adapt
 from . import errors as e
 from . import pq
-from .abc import ConnectionType, Loader, Params, PQGen, Query
-from .rows import Row, RowMaker
+from ._capabilities import capabilities
 from ._column import Column
 from ._compat import Template
-from .pq.misc import connection_summary
-from ._queries import PostgresClientQuery, PostgresQuery
 from ._preparing import Prepare
+from ._queries import PostgresClientQuery, PostgresQuery
+from .abc import ConnectionType, Loader, Params, PQGen, Query
 from .generators import execute, fetch, send
-from ._capabilities import capabilities
+from .pq.misc import connection_summary
+from .rows import Row, RowMaker
 
 if TYPE_CHECKING:
     from .abc import Transformer

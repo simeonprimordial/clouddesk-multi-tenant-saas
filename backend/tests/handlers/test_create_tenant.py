@@ -5,7 +5,6 @@ from unittest.mock import patch
 
 from create_tenant.handler import create_slug, lambda_handler
 
-
 CURRENT_USER = {
     "id": "user-123",
     "status": "active",
@@ -73,9 +72,7 @@ def test_create_tenant_requires_name(mock_get_current_user):
     )
 
     assert response["statusCode"] == 400
-    assert response_body(response)["message"] == (
-        "Tenant name is required."
-    )
+    assert response_body(response)["message"] == ("Tenant name is required.")
 
 
 @patch("create_tenant.handler.get_current_user")

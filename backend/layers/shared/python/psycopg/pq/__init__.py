@@ -11,14 +11,23 @@ implementation-dependant but all the implementations share the same interface.
 
 from __future__ import annotations
 
-import os
 import logging
+import os
 from collections.abc import Callable
 
 from . import abc
+from ._enums import (
+    ConnStatus,
+    DiagnosticField,
+    ExecStatus,
+    Format,
+    Ping,
+    PipelineStatus,
+    PollingStatus,
+    Trace,
+    TransactionStatus,
+)
 from .misc import ConninfoOption, PGnotify, PGresAttDesc, error_message, version_pretty
-from ._enums import ConnStatus, DiagnosticField, ExecStatus, Format, Ping
-from ._enums import PipelineStatus, PollingStatus, Trace, TransactionStatus
 
 logger = logging.getLogger(__name__)
 
@@ -105,10 +114,12 @@ def import_from_libpq() -> None:
         raise ImportError(f"requested psycopg implementation '{impl}' unknown")
     else:
         sattempts = "\n".join(f"- {attempt}" for attempt in attempts)
-        raise ImportError(f"""\
+        raise ImportError(
+            f"""\
 no pq wrapper available.
 Attempts made:
-{sattempts}""")
+{sattempts}"""
+        )
 
 
 import_from_libpq()

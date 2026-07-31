@@ -98,6 +98,7 @@ def close_connection() -> None:
 
     _connection = None
 
+
 def get_user_by_cognito_sub(
     cognito_sub: str,
 ) -> dict[str, Any] | None:
@@ -179,6 +180,7 @@ def create_user(
                 )
 
             return user
+
 
 def get_tenant_by_slug(slug: str):
     """Return a tenant matching the supplied slug."""
@@ -264,6 +266,7 @@ def create_tenant_with_owner(
         connection.rollback()
         raise
 
+
 def get_tenants_for_user(user_id):
     """Return active tenant memberships for a CloudDesk user."""
 
@@ -293,6 +296,7 @@ def get_tenants_for_user(user_id):
         )
 
         return cursor.fetchall()
+
 
 def get_membership(
     tenant_id,
@@ -325,7 +329,8 @@ def get_membership(
             ),
         )
 
-        return cursor.fetchone()    
+        return cursor.fetchone()
+
 
 def get_tenant_by_id(tenant_id):
     """
@@ -352,6 +357,7 @@ def get_tenant_by_id(tenant_id):
         )
 
         return cursor.fetchone()
+
 
 def get_tenant_members(tenant_id):
     """
@@ -390,6 +396,7 @@ def get_tenant_members(tenant_id):
 
         return cursor.fetchall()
 
+
 def get_user_by_email(email):
     """
     Return an active CloudDesk user by email address.
@@ -414,6 +421,7 @@ def get_user_by_email(email):
         )
 
         return cursor.fetchone()
+
 
 def create_tenant_membership(
     tenant_id,
@@ -454,6 +462,7 @@ def create_tenant_membership(
     connection.commit()
 
     return membership
+
 
 def update_tenant_member_role(
     tenant_id,
@@ -497,6 +506,7 @@ def update_tenant_member_role(
 
     return membership
 
+
 def get_tenant_member(
     tenant_id,
     user_id,
@@ -528,6 +538,7 @@ def get_tenant_member(
         )
 
         return cursor.fetchone()
+
 
 def deactivate_tenant_member(
     tenant_id,

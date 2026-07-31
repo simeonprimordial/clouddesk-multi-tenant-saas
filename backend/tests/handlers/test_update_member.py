@@ -5,7 +5,6 @@ from unittest.mock import patch
 
 from update_member.handler import lambda_handler
 
-
 CURRENT_USER = {
     "id": "owner-123",
     "status": "active",
@@ -108,9 +107,7 @@ def test_update_member_rejects_missing_member(
     )
 
     assert response["statusCode"] == 404
-    assert response_body(response)["message"] == (
-        "Tenant member not found."
-    )
+    assert response_body(response)["message"] == ("Tenant member not found.")
 
 
 @patch("update_member.handler.get_tenant_member")

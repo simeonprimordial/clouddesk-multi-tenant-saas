@@ -24,16 +24,13 @@ def require_membership(
     )
 
     if membership is None:
-        raise AuthorizationError(
-            "You are not a member of this tenant."
-        )
+        raise AuthorizationError("You are not a member of this tenant.")
 
     if membership["status"] != "active":
-        raise AuthorizationError(
-            "Your tenant membership is inactive."
-        )
+        raise AuthorizationError("Your tenant membership is inactive.")
 
     return membership
+
 
 def require_admin(
     *,
@@ -51,11 +48,10 @@ def require_admin(
     )
 
     if membership["role"] not in ("owner", "admin"):
-        raise AuthorizationError(
-            "Administrator privileges are required."
-        )
+        raise AuthorizationError("Administrator privileges are required.")
 
     return membership
+
 
 def require_owner(
     *,
@@ -72,8 +68,6 @@ def require_owner(
     )
 
     if membership["role"] != "owner":
-        raise AuthorizationError(
-            "Only the tenant owner can perform this action."
-        )
+        raise AuthorizationError("Only the tenant owner can perform this action.")
 
     return membership

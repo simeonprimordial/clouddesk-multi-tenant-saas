@@ -5,18 +5,15 @@ API Gateway validates Cognito JWTs before invoking protected
 Lambda functions. This module reads trusted JWT claims from the
 API Gateway event and resolves the corresponding CloudDesk user.
 """
-from .authorization import AuthorizationError
 
 from typing import Any
 
+from .authorization import AuthorizationError
 from .db import get_user_by_cognito_sub
 
 
 class AuthenticationError(Exception):
     """Raised when authenticated user information is unavailable."""
-
-
-
 
 
 def get_jwt_claims(event: dict[str, Any]) -> dict[str, Any]:
@@ -87,8 +84,6 @@ def get_current_user(event: dict[str, Any]) -> dict[str, Any]:
         )
 
     if user["status"] != "active":
-        raise AuthorizationError(
-            "The authenticated CloudDesk user is inactive."
-        )
+        raise AuthorizationError("The authenticated CloudDesk user is inactive.")
 
     return user

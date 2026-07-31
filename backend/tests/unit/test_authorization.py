@@ -3,14 +3,12 @@
 from unittest.mock import patch
 
 import pytest
-
 from shared.authorization import (
     AuthorizationError,
     require_admin,
     require_membership,
     require_owner,
 )
-
 
 CURRENT_USER = {
     "id": "user-123",
