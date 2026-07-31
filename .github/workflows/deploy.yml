@@ -1,0 +1,68 @@
+name: CloudDesk Deployment
+
+on:
+  workflow_run:
+    workflows:
+      - CloudDesk CI
+    types:
+      - completed
+    branches:
+      - main
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: clouddesk-production-deployment
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy CloudDesk to AWS
+
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'main'
+
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout validated commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Set up AWS SAM CLI
+        uses: aws-actions/setup-sam@v2
+
+      - name: Configure AWS credentials using OIDC
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-session-name: CloudDeskGitHubDeployment
+
+      - name: Verify assumed AWS identity
+        run: aws sts get-caller-identity
+
+      - name: Build SAM application
+        run: sam build
+
+      - name: Deploy CloudDesk
+        run: >
+          sam deploy
+          --stack-name clouddesk-backend
+          --region "${{ vars.AWS_REGION }}"
+          --capabilities CAPABILITY_IAM
+          --no-confirm-changeset
+          --no-fail-on-empty-changeset
