@@ -732,6 +732,38 @@ curl -X DELETE \
 
 ---
 
+## Running Tests
+
+CloudDesk uses **pytest** for automated testing.
+
+### Install development dependencies
+
+```bash
+pip install -r requirements-dev.txt
+```
+
+### Run all tests
+
+```bash
+pytest tests/unit tests/handlers
+```
+
+### Generate a coverage report
+
+```bash
+pytest tests/unit tests/handlers \
+    --cov=layers/shared/python/shared \
+    --cov-report=html
+```
+
+The HTML coverage report will be generated in:
+
+```text
+htmlcov/index.html
+```
+
+---
+
 ## Security Considerations
 
 CloudDesk implements the following security controls:
@@ -975,7 +1007,7 @@ This separation allowed new API endpoints to be added without duplicating securi
 
 ---
 
-## Future Improvements
+<!-- ## Future Improvements
 
 Potential future improvements include:
 
@@ -994,7 +1026,7 @@ Potential future improvements include:
 - Backup and recovery validation.
 - Separate development, staging, and production environments.
 
-These improvements will only be introduced when they solve a clear engineering requirement.
+These improvements will only be introduced when they solve a clear engineering requirement. -->
 
 ---
 

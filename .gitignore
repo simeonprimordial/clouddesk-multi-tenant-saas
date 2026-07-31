@@ -1,2 +1,115 @@
-python
-backend/samconfig.toml
+############################################
+# Python
+############################################
+
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyd
+*.so
+
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+############################################
+# Python virtual environments
+############################################
+
+.venv/
+venv/
+env/
+ENV/
+
+############################################
+# AWS SAM build artifacts
+############################################
+
+.aws-sam/
+.aws-sam-cache/
+sam-template-packaged.yaml
+packaged.yaml
+
+############################################
+# Local SAM configuration
+############################################
+
+samconfig.toml
+samconfig.local.toml
+
+############################################
+# Environment variables and secrets
+############################################
+
+.env
+.env.*
+!.env.example
+
+*.secret
+*.secrets
+secrets.json
+credentials.json
+
+############################################
+# AWS credentials and local configuration
+############################################
+
+.aws/
+aws-credentials*
+credentials
+config.local
+
+############################################
+# Certificates and private keys
+############################################
+
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+
+############################################
+# Logs
+############################################
+
+*.log
+logs/
+
+############################################
+# IDE and editor files
+############################################
+
+.vscode/
+.idea/
+*.code-workspace
+
+############################################
+# Operating-system files
+############################################
+
+.DS_Store
+Thumbs.db
+desktop.ini
+
+############################################
+# Temporary files
+############################################
+
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+.cache/
+
+############################################
+# Test and local output
+############################################
+
+test-results/
+reports/
+coverage.xml
