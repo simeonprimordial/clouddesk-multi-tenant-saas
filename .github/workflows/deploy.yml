@@ -44,7 +44,7 @@ jobs:
 
       - name: Set up AWS SAM CLI
         uses: aws-actions/setup-sam@v2
-        
+
       - name: Configure AWS Credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v5
         with:
@@ -72,3 +72,18 @@ jobs:
           LambdaSubnetIds="subnet-078f2418a092901fd,subnet-045b3b611cdf127b0"
           --no-confirm-changeset
           --no-fail-on-empty-changeset
+      - name: Configure CloudWatch log retention
+        shell: bash
+        run: |
+          LOG_GROUPS=$(aws logs describe-log-groups \
+            --log-group-name-prefix "/aws/lambda/clouddesk-dev-" \
+            --query "logGroups[].logGroupName" \
+            --output text)
+
+          for LOG_GROUP in $LOG_GROUPS; do
+            echo "Setting 30-day retention for ${LOG_GROUP}"
+
+            aws logs put-retention-policy \
+              --log-group-name "${LOG_GROUP}" \
+              --retention-in-days 30
+          done
