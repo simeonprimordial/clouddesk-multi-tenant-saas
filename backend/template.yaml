@@ -831,6 +831,115 @@ Resources:
       AlarmActions:
         - !Ref AlarmTopic
 
+  ############################################
+  # CloudWatch Dashboard
+  ############################################
+
+  CloudDeskDashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Properties:
+      DashboardName: !Sub clouddesk-${Environment}
+      DashboardBody: !Sub |
+        {
+          "widgets": [
+            {
+              "type":"metric",
+              "x":0,
+              "y":0,
+              "width":12,
+              "height":6,
+              "properties":{
+                "title":"Lambda Invocations",
+                "view":"timeSeries",
+                "region":"${AWS::Region}",
+                "metrics":[
+                  ["AWS/Lambda","Invocations"]
+                ],
+                "stat":"Sum"
+              }
+            },
+            {
+              "type":"metric",
+              "x":12,
+              "y":0,
+              "width":12,
+              "height":6,
+              "properties":{
+                "title":"Lambda Errors",
+                "view":"timeSeries",
+                "region":"${AWS::Region}",
+                "metrics":[
+                  ["AWS/Lambda","Errors"]
+                ],
+                "stat":"Sum"
+              }
+            },
+            {
+              "type":"metric",
+              "x":0,
+              "y":6,
+              "width":12,
+              "height":6,
+              "properties":{
+                "title":"Lambda Duration",
+                "view":"timeSeries",
+                "region":"${AWS::Region}",
+                "metrics":[
+                  ["AWS/Lambda","Duration"]
+                ],
+                "stat":"Average"
+              }
+            },
+            {
+              "type":"metric",
+              "x":12,
+              "y":6,
+              "width":12,
+              "height":6,
+              "properties":{
+                "title":"API Gateway 5XX Errors",
+                "view":"timeSeries",
+                "region":"${AWS::Region}",
+                "metrics":[
+                  ["AWS/ApiGateway","5XXError","ApiId","${CloudDeskHttpApi}"]
+                ],
+                "stat":"Sum"
+              }
+            },
+            {
+              "type":"metric",
+              "x":0,
+              "y":12,
+              "width":12,
+              "height":6,
+              "properties":{
+                "title":"RDS CPU Utilization",
+                "view":"timeSeries",
+                "region":"${AWS::Region}",
+                "metrics":[
+                  ["AWS/RDS","CPUUtilization","DBInstanceIdentifier","clouddesk-db"]
+                ],
+                "stat":"Average"
+              }
+            },
+            {
+              "type":"metric",
+              "x":12,
+              "y":12,
+              "width":12,
+              "height":6,
+              "properties":{
+                "title":"Database Connections",
+                "view":"timeSeries",
+                "region":"${AWS::Region}",
+                "metrics":[
+                  ["AWS/RDS","DatabaseConnections","DBInstanceIdentifier","clouddesk-db"]
+                ],
+                "stat":"Average"
+              }
+            }
+          ]
+        }
 
 
 Outputs:
