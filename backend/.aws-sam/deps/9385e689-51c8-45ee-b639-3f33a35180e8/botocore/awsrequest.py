@@ -17,15 +17,8 @@ from collections.abc import Mapping
 
 import botocore.utils
 import urllib3.util
-from botocore.compat import (
-    HTTPHeaders,
-    HTTPResponse,
-    MutableMapping,
-    urlencode,
-    urlparse,
-    urlsplit,
-    urlunsplit,
-)
+from botocore.compat import (HTTPHeaders, HTTPResponse, MutableMapping,
+                             urlencode, urlparse, urlsplit, urlunsplit)
 from botocore.exceptions import UnseekableStreamError
 from urllib3.connection import HTTPConnection, VerifiedHTTPSConnection
 from urllib3.connectionpool import HTTPConnectionPool, HTTPSConnectionPool

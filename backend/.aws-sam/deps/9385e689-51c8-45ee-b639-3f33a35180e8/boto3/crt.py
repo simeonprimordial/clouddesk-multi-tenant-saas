@@ -27,13 +27,9 @@ from boto3.compat import TRANSFER_CONFIG_SUPPORTS_CRT
 from boto3.exceptions import InvalidCrtTransferConfigError
 from boto3.s3.constants import CRT_TRANSFER_CLIENT
 from botocore.session import Session
-from s3transfer.crt import (
-    BotocoreCRTCredentialsWrapper,
-    BotocoreCRTRequestSerializer,
-    CRTTransferManager,
-    acquire_crt_s3_process_lock,
-    create_s3_crt_client,
-)
+from s3transfer.crt import (BotocoreCRTCredentialsWrapper,
+                            BotocoreCRTRequestSerializer, CRTTransferManager,
+                            acquire_crt_s3_process_lock, create_s3_crt_client)
 
 logger = logging.getLogger(__name__)
 

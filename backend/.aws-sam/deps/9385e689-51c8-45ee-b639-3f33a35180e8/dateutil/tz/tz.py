@@ -20,13 +20,8 @@ import six
 from six import string_types
 from six.moves import _thread
 
-from ._common import (
-    _tzinfo,
-    _validate_fromutc_inputs,
-    enfold,
-    tzname_in_python2,
-    tzrangebase,
-)
+from ._common import (_tzinfo, _validate_fromutc_inputs, enfold,
+                      tzname_in_python2, tzrangebase)
 from ._factories import _TzOffsetFactory, _TzSingleton, _TzStrFactory
 
 try:

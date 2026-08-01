@@ -21,11 +21,8 @@ import string
 import threading
 from collections import defaultdict
 
-from botocore.exceptions import (
-    IncompleteReadError,
-    ReadTimeoutError,
-    ResponseStreamingError,
-)
+from botocore.exceptions import (IncompleteReadError, ReadTimeoutError,
+                                 ResponseStreamingError)
 from botocore.httpchecksum import DEFAULT_CHECKSUM_ALGORITHM, AwsChunkedWrapper
 from botocore.utils import is_s3express_bucket
 from s3transfer.compat import SOCKET_ERROR, fallocate, rename_file

@@ -6,12 +6,8 @@ Types configuration specific to PostgreSQL.
 
 from ._adapters_map import AdaptersMap
 from ._typeinfo import TypeInfo, TypesRegistry
-from ._typemod import (
-    BitTypeModifier,
-    CharTypeModifier,
-    NumericTypeModifier,
-    TimeTypeModifier,
-)
+from ._typemod import (BitTypeModifier, CharTypeModifier, NumericTypeModifier,
+                       TimeTypeModifier)
 from .abc import AdaptContext
 
 # Global objects with PostgreSQL builtins and globally registered user types.
@@ -137,22 +133,9 @@ def register_default_types(types: TypesRegistry) -> None:
 
 
 def register_default_adapters(context: AdaptContext) -> None:
-    from .types import (
-        array,
-        bool,
-        composite,
-        datetime,
-        enum,
-        json,
-        multirange,
-        net,
-        none,
-        numeric,
-        numpy,
-        range,
-        string,
-        uuid,
-    )
+    from .types import (array, bool, composite, datetime, enum, json,
+                        multirange, net, none, numeric, numpy, range, string,
+                        uuid)
 
     array.register_default_adapters(context)
     composite.register_default_adapters(context)

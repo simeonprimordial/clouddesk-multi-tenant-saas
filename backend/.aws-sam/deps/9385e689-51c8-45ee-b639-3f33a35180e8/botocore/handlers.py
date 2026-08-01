@@ -29,56 +29,32 @@ import botocore
 import botocore.auth
 from botocore import retryhandler  # noqa: F401
 from botocore import translate  # noqa: F401
-from botocore import (
-    utils,
-)
+from botocore import utils
 from botocore.args import ClientConfigString
 from botocore.compat import MD5_AVAILABLE  # noqa: F401
-from botocore.compat import (
-    ETree,
-    OrderedDict,
-    XMLParseError,
-    ensure_bytes,
-    get_md5,
-    json,
-    quote,
-    unquote,
-    unquote_str,
-    urlsplit,
-    urlunsplit,
-)
-from botocore.docs.utils import (
-    AppendParamDocumentation,
-    AutoPopulatedParam,
-    DocumentModifiedShape,
-    HideParamFromOperations,
-)
+from botocore.compat import (ETree, OrderedDict, XMLParseError, ensure_bytes,
+                             get_md5, json, quote, unquote, unquote_str,
+                             urlsplit, urlunsplit)
+from botocore.docs.utils import (AppendParamDocumentation, AutoPopulatedParam,
+                                 DocumentModifiedShape,
+                                 HideParamFromOperations)
 from botocore.endpoint_provider import VALID_HOST_LABEL_RE
 from botocore.exceptions import MissingServiceIdError  # noqa: F401
-from botocore.exceptions import (
-    AliasConflictParameterError,
-    ParamValidationError,
-    UnsupportedTLSVersionWarning,
-)
+from botocore.exceptions import (AliasConflictParameterError,
+                                 ParamValidationError,
+                                 UnsupportedTLSVersionWarning)
 from botocore.regions import EndpointResolverBuiltins
 from botocore.serialize import TIMESTAMP_PRECISION_MILLISECOND
-from botocore.signers import (
-    add_dsql_generate_db_auth_token_methods,
-    add_generate_db_auth_token,
-    add_generate_presigned_post,
-    add_generate_presigned_url,
-)
+from botocore.signers import (add_dsql_generate_db_auth_token_methods,
+                              add_generate_db_auth_token,
+                              add_generate_presigned_post,
+                              add_generate_presigned_url)
 from botocore.useragent import register_feature_id
 from botocore.utils import SERVICE_NAME_ALIASES  # noqa: F401
 from botocore.utils import hyphenize_service_id  # noqa: F401
 from botocore.utils import is_global_accesspoint  # noqa: F401
-from botocore.utils import (
-    SAFE_CHARS,
-    ArnParser,
-    get_token_from_environment,
-    percent_encode,
-    switch_host_with_param,
-)
+from botocore.utils import (SAFE_CHARS, ArnParser, get_token_from_environment,
+                            percent_encode, switch_host_with_param)
 
 logger = logging.getLogger(__name__)
 

@@ -207,14 +207,9 @@ from s3transfer.compat import MAXINT, BaseManager
 from s3transfer.constants import ALLOWED_DOWNLOAD_ARGS, MB, PROCESS_USER_AGENT
 from s3transfer.exceptions import CancelledError, RetriesExceededError
 from s3transfer.futures import BaseTransferFuture, BaseTransferMeta
-from s3transfer.utils import (
-    S3_RETRYABLE_DOWNLOAD_ERRORS,
-    CallArgs,
-    OSUtils,
-    calculate_num_parts,
-    calculate_range_parameter,
-    create_nested_client,
-)
+from s3transfer.utils import (S3_RETRYABLE_DOWNLOAD_ERRORS, CallArgs, OSUtils,
+                              calculate_num_parts, calculate_range_parameter,
+                              create_nested_client)
 
 logger = logging.getLogger(__name__)
 

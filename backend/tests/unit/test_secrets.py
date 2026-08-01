@@ -5,10 +5,7 @@ from unittest.mock import patch
 
 import pytest
 from botocore.exceptions import BotoCoreError, ClientError
-from shared.secrets import (
-    SecretConfigurationError,
-    get_database_secret,
-)
+from shared.secrets import SecretConfigurationError, get_database_secret
 
 VALID_SECRET = {
     "host": "clouddesk-db.example.us-east-1.rds.amazonaws.com",

@@ -28,23 +28,11 @@ from ._enums import IsolationLevel
 from ._pipeline import Pipeline
 from ._server_cursor import ServerCursor
 from ._tpc import Xid
-from .abc import (
-    RV,
-    AdaptContext,
-    ConnDict,
-    ConnParam,
-    Params,
-    PQGen,
-    Query,
-    QueryNoTemplate,
-)
+from .abc import (RV, AdaptContext, ConnDict, ConnParam, Params, PQGen, Query,
+                  QueryNoTemplate)
 from .adapt import AdaptersMap
-from .conninfo import (
-    conninfo_attempts,
-    conninfo_to_dict,
-    make_conninfo,
-    timeout_from_conninfo,
-)
+from .conninfo import (conninfo_attempts, conninfo_to_dict, make_conninfo,
+                       timeout_from_conninfo)
 from .cursor import Cursor
 from .generators import notifies
 from .rows import Row, RowFactory, args_row, tuple_row

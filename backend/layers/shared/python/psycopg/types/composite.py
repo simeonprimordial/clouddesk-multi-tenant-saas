@@ -13,22 +13,16 @@ from abc import ABC, abstractmethod
 from collections import namedtuple
 from collections.abc import Callable, Sequence
 from functools import cache
-from typing import TYPE_CHECKING, Any, Generic, NamedTuple, TypeAlias, TypeVar, cast
+from typing import (TYPE_CHECKING, Any, Generic, NamedTuple, TypeAlias,
+                    TypeVar, cast)
 
 from .. import abc, postgres, pq, sql
 from .._encodings import _as_python_identifier
 from .._oids import TEXT_OID
 from .._struct import pack_len, unpack_len
 from .._typeinfo import TypeInfo
-from ..adapt import (
-    Buffer,
-    Dumper,
-    Loader,
-    PyFormat,
-    RecursiveDumper,
-    RecursiveLoader,
-    Transformer,
-)
+from ..adapt import (Buffer, Dumper, Loader, PyFormat, RecursiveDumper,
+                     RecursiveLoader, Transformer)
 
 if TYPE_CHECKING:
     from .._connection_base import BaseConnection

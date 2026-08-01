@@ -16,11 +16,9 @@ from botocore import xform_name
 from botocore.compat import OrderedDict
 from botocore.docs.bcdoc.restdoc import DocumentStructure
 from botocore.docs.example import ResponseExampleDocumenter
-from botocore.docs.method import (
-    document_custom_method,
-    document_model_driven_method,
-    get_instance_public_methods,
-)
+from botocore.docs.method import (document_custom_method,
+                                  document_model_driven_method,
+                                  get_instance_public_methods)
 from botocore.docs.params import ResponseParamsDocumenter
 from botocore.docs.sharedexample import document_shared_examples
 from botocore.docs.utils import DocumentedShape, get_official_service_name

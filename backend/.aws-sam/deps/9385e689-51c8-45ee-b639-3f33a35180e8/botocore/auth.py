@@ -25,29 +25,14 @@ from hashlib import sha1, sha256
 from operator import itemgetter
 
 from botocore.compat import MD5_AVAILABLE  # noqa: F401
-from botocore.compat import (
-    HAS_CRT,
-    HTTPHeaders,
-    encodebytes,
-    ensure_unicode,
-    get_current_datetime,
-    parse_qs,
-    quote,
-    unquote,
-    urlsplit,
-    urlunsplit,
-)
-from botocore.exceptions import (
-    NoAuthTokenError,
-    NoCredentialsError,
-    UnknownSignatureVersionError,
-    UnsupportedSignatureVersionError,
-)
-from botocore.utils import (
-    is_valid_ipv6_endpoint_url,
-    normalize_url_path,
-    percent_encode_sequence,
-)
+from botocore.compat import (HAS_CRT, HTTPHeaders, encodebytes, ensure_unicode,
+                             get_current_datetime, parse_qs, quote, unquote,
+                             urlsplit, urlunsplit)
+from botocore.exceptions import (NoAuthTokenError, NoCredentialsError,
+                                 UnknownSignatureVersionError,
+                                 UnsupportedSignatureVersionError)
+from botocore.utils import (is_valid_ipv6_endpoint_url, normalize_url_path,
+                            percent_encode_sequence)
 
 logger = logging.getLogger(__name__)
 

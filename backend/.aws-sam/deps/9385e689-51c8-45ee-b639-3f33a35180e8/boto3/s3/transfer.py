@@ -129,13 +129,11 @@ from os import PathLike, fspath, getpid
 
 import boto3.s3.constants as constants
 from boto3.compat import TRANSFER_CONFIG_SUPPORTS_CRT
-from boto3.exceptions import (
-    RetriesExceededError,
-    S3UploadFailedError,
-)
+from boto3.exceptions import RetriesExceededError, S3UploadFailedError
 from botocore.compat import HAS_CRT
 from botocore.exceptions import ClientError, MissingDependencyException
-from s3transfer.exceptions import RetriesExceededError as S3TransferRetriesExceededError
+from s3transfer.exceptions import \
+    RetriesExceededError as S3TransferRetriesExceededError
 from s3transfer.futures import NonThreadedExecutor
 from s3transfer.manager import TransferConfig as S3TransferConfig
 from s3transfer.manager import TransferManager

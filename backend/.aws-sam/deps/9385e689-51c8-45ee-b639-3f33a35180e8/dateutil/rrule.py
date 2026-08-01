@@ -12,7 +12,6 @@ import itertools
 import re
 import sys
 from functools import wraps
-
 # For warning about deprecation of until and count
 from warnings import warn
 

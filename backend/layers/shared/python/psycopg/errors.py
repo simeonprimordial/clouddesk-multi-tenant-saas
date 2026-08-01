@@ -25,7 +25,8 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field, fields
 from typing import TYPE_CHECKING, Any, NoReturn, TypeAlias, TypeGuard
 
-from .pq._enums import ConnStatus, DiagnosticField, PipelineStatus, TransactionStatus
+from .pq._enums import (ConnStatus, DiagnosticField, PipelineStatus,
+                        TransactionStatus)
 from .pq.abc import PGconn, PGresult
 
 if TYPE_CHECKING:

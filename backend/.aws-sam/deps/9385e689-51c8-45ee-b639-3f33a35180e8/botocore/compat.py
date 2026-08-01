@@ -43,18 +43,8 @@ from email.utils import formatdate
 from http.client import HTTPResponse
 from io import IOBase as _IOBase
 from itertools import zip_longest
-from urllib.parse import (
-    parse_qs,
-    parse_qsl,
-    quote,
-    unquote,
-    unquote_plus,
-    urlencode,
-    urljoin,
-    urlparse,
-    urlsplit,
-    urlunsplit,
-)
+from urllib.parse import (parse_qs, parse_qsl, quote, unquote, unquote_plus,
+                          urlencode, urljoin, urlparse, urlsplit, urlunsplit)
 
 file_type = _IOBase
 zip = zip

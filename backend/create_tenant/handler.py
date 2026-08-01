@@ -5,15 +5,9 @@ Create a new CloudDesk tenant for the authenticated user.
 import json
 import re
 
-from shared.auth import (
-    AuthenticationError,
-    AuthorizationError,
-    get_current_user,
-)
-from shared.db import (
-    create_tenant_with_owner,
-    get_tenant_by_slug,
-)
+from shared.auth import AuthenticationError, AuthorizationError, get_current_user
+from shared.db import create_tenant_with_owner, get_tenant_by_slug
+from shared.observability import log_operation
 from shared.response import error, success
 from shared.serialization import serialize_dict
 
@@ -31,6 +25,14 @@ def lambda_handler(event, context):
 
     try:
         current_user = get_current_user(event)
+
+        log_operation(
+            "Create tenant request received.",
+            event=event,
+            context=context,
+            outcome="started",
+            current_user=current_user,
+        )
 
         body = json.loads(event.get("body") or "{}")
         name = str(body.get("name") or "").strip()
@@ -77,6 +79,19 @@ def lambda_handler(event, context):
 
         serialized_tenant = serialize_dict(tenant)
 
+        log_operation(
+            "Tenant created successfully.",
+            event=event,
+            context=context,
+            outcome="success",
+            current_user=current_user,
+            status_code=201,
+            extra={
+                "tenant_id": tenant["id"],
+                "tenant_name": tenant["name"],
+            },
+        )
+
         return success(
             message="Tenant created successfully.",
             data=serialized_tenant,
@@ -102,6 +117,16 @@ def lambda_handler(event, context):
         )
 
     except Exception:
+
+        log_operation(
+            "Tenant creation failed.",
+            event=event,
+            context=context,
+            outcome="failure",
+            current_user=None,
+            status_code=500,
+        )
+
         return error(
             message="Unable to create tenant.",
             status_code=500,

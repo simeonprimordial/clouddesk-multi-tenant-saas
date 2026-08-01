@@ -17,13 +17,9 @@ import logging
 import random
 from binascii import crc32
 
-from botocore.exceptions import (
-    ChecksumError,
-    ConnectionClosedError,
-    ConnectionError,
-    EndpointConnectionError,
-    ReadTimeoutError,
-)
+from botocore.exceptions import (ChecksumError, ConnectionClosedError,
+                                 ConnectionError, EndpointConnectionError,
+                                 ReadTimeoutError)
 
 logger = logging.getLogger(__name__)
 # The only supported error for now is GENERAL_CONNECTION_ERROR

@@ -32,12 +32,8 @@ import time
 # Currently it's only available to internal users for testing and validation.
 # Any usage is not advised or supported in external code bases.
 from botocore.configprovider import NEW_RETRIES_ENABLED
-from botocore.exceptions import (
-    ConnectionError,
-    ConnectTimeoutError,
-    HTTPClientError,
-    ReadTimeoutError,
-)
+from botocore.exceptions import (ConnectionError, ConnectTimeoutError,
+                                 HTTPClientError, ReadTimeoutError)
 from botocore.retries import quota, special
 from botocore.retries.base import BaseRetryableChecker, BaseRetryBackoff
 

@@ -4,19 +4,10 @@ Add an existing CloudDesk user to a tenant.
 
 import json
 
-from shared.auth import (
-    AuthenticationError,
-    get_current_user,
-)
-from shared.authorization import (
-    AuthorizationError,
-    require_admin,
-)
-from shared.db import (
-    create_tenant_membership,
-    get_membership,
-    get_user_by_email,
-)
+from shared.auth import AuthenticationError, get_current_user
+from shared.authorization import AuthorizationError, require_admin
+from shared.db import create_tenant_membership, get_membership, get_user_by_email
+from shared.observability import log_operation
 from shared.response import error, success
 from shared.serialization import serialize_dict
 
@@ -31,6 +22,14 @@ def lambda_handler(event, context):
 
     try:
         current_user = get_current_user(event)
+
+        log_operation(
+            "Add tenant member request received.",
+            event=event,
+            context=context,
+            outcome="started",
+            current_user=current_user,
+        )
 
         tenant_id = event.get("pathParameters", {}).get("tenantId")
 
@@ -99,6 +98,20 @@ def lambda_handler(event, context):
             "membership": serialize_dict(membership),
         }
 
+        log_operation(
+            "Tenant member added.",
+            event=event,
+            context=context,
+            outcome="success",
+            current_user=current_user,
+            status_code=201,
+            extra={
+                "tenant_id": tenant_id,
+                "target_user_id": target_user["id"],
+                "assigned_role": role,
+            },
+        )
+
         return success(
             message="Tenant member added successfully.",
             data=response_data,
@@ -118,6 +131,16 @@ def lambda_handler(event, context):
         )
 
     except Exception:
+
+        log_operation(
+            "Failed to add tenant member.",
+            event=event,
+            context=context,
+            outcome="failure",
+            current_user=None,
+            status_code=500,
+        )
+
         return error(
             message="Unable to add tenant member.",
             status_code=500,

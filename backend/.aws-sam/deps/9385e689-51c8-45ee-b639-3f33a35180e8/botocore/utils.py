@@ -35,7 +35,6 @@ import botocore
 import botocore.awsrequest
 import botocore.httpsession
 import dateutil.parser
-
 # IP Regexes retained for backwards compatibility
 from botocore.compat import HEX_PAT  # noqa: F401
 from botocore.compat import IPV4_PAT  # noqa: F401
@@ -44,53 +43,30 @@ from botocore.compat import IPV6_PAT  # noqa: F401
 from botocore.compat import LS32_PAT  # noqa: F401
 from botocore.compat import UNRESERVED_PAT  # noqa: F401
 from botocore.compat import ZONE_ID_PAT  # noqa: F401
-from botocore.compat import (
-    HAS_CRT,
-    IPV4_RE,
-    IPV6_ADDRZ_RE,
-    MD5_AVAILABLE,
-    UNSAFE_URL_CHARS,
-    OrderedDict,
-    get_current_datetime,
-    get_md5,
-    get_tzinfo_options,
-    json,
-    quote,
-    urlparse,
-    urlsplit,
-    urlunsplit,
-    zip_longest,
-)
-from botocore.exceptions import (
-    ClientError,
-    ConfigNotFound,
-    ConnectionClosedError,
-    ConnectTimeoutError,
-    EndpointConnectionError,
-    HTTPClientError,
-    InvalidDNSNameError,
-    InvalidEndpointConfigurationError,
-    InvalidExpressionError,
-    InvalidHostLabelError,
-    InvalidIMDSEndpointError,
-    InvalidIMDSEndpointModeError,
-    InvalidRegionError,
-    MetadataRetrievalError,
-    MissingDependencyException,
-    ReadTimeoutError,
-    SSOTokenLoadError,
-    UnsupportedOutpostResourceError,
-    UnsupportedS3AccesspointConfigurationError,
-    UnsupportedS3ArnError,
-    UnsupportedS3ConfigurationError,
-    UnsupportedS3ControlArnError,
-    UnsupportedS3ControlConfigurationError,
-)
-from botocore.plugin import (
-    PluginContext,
-    reset_plugin_context,
-    set_plugin_context,
-)
+from botocore.compat import (HAS_CRT, IPV4_RE, IPV6_ADDRZ_RE, MD5_AVAILABLE,
+                             UNSAFE_URL_CHARS, OrderedDict,
+                             get_current_datetime, get_md5, get_tzinfo_options,
+                             json, quote, urlparse, urlsplit, urlunsplit,
+                             zip_longest)
+from botocore.exceptions import (ClientError, ConfigNotFound,
+                                 ConnectionClosedError, ConnectTimeoutError,
+                                 EndpointConnectionError, HTTPClientError,
+                                 InvalidDNSNameError,
+                                 InvalidEndpointConfigurationError,
+                                 InvalidExpressionError, InvalidHostLabelError,
+                                 InvalidIMDSEndpointError,
+                                 InvalidIMDSEndpointModeError,
+                                 InvalidRegionError, MetadataRetrievalError,
+                                 MissingDependencyException, ReadTimeoutError,
+                                 SSOTokenLoadError,
+                                 UnsupportedOutpostResourceError,
+                                 UnsupportedS3AccesspointConfigurationError,
+                                 UnsupportedS3ArnError,
+                                 UnsupportedS3ConfigurationError,
+                                 UnsupportedS3ControlArnError,
+                                 UnsupportedS3ControlConfigurationError)
+from botocore.plugin import (PluginContext, reset_plugin_context,
+                             set_plugin_context)
 from dateutil.tz import tzutc
 from urllib3.exceptions import LocationParseError
 

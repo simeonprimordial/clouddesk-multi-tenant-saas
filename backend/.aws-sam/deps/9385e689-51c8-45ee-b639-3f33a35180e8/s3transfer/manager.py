@@ -16,35 +16,20 @@ import re
 import threading
 
 from s3transfer.bandwidth import BandwidthLimiter, LeakyBucket
-from s3transfer.constants import (
-    ALLOWED_DOWNLOAD_ARGS,
-    FULL_OBJECT_CHECKSUM_ARGS,
-    KB,
-    MB,
-)
+from s3transfer.constants import (ALLOWED_DOWNLOAD_ARGS,
+                                  FULL_OBJECT_CHECKSUM_ARGS, KB, MB)
 from s3transfer.copies import CopySubmissionTask
 from s3transfer.delete import DeleteSubmissionTask
 from s3transfer.download import DownloadSubmissionTask
 from s3transfer.exceptions import CancelledError, FatalError
-from s3transfer.futures import (
-    IN_MEMORY_DOWNLOAD_TAG,
-    IN_MEMORY_UPLOAD_TAG,
-    BoundedExecutor,
-    TransferCoordinator,
-    TransferFuture,
-    TransferMeta,
-)
+from s3transfer.futures import (IN_MEMORY_DOWNLOAD_TAG, IN_MEMORY_UPLOAD_TAG,
+                                BoundedExecutor, TransferCoordinator,
+                                TransferFuture, TransferMeta)
 from s3transfer.upload import UploadSubmissionTask
-from s3transfer.utils import (
-    CallArgs,
-    OSUtils,
-    SlidingWindowSemaphore,
-    TaskSemaphore,
-    get_callbacks,
-    set_default_checksum_algorithm,
-    signal_not_transferring,
-    signal_transferring,
-)
+from s3transfer.utils import (CallArgs, OSUtils, SlidingWindowSemaphore,
+                              TaskSemaphore, get_callbacks,
+                              set_default_checksum_algorithm,
+                              signal_not_transferring, signal_transferring)
 
 logger = logging.getLogger(__name__)
 

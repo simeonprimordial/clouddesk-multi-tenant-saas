@@ -2,11 +2,7 @@
 Return the active tenants available to the authenticated user.
 """
 
-from shared.auth import (
-    AuthenticationError,
-    AuthorizationError,
-    get_current_user,
-)
+from shared.auth import AuthenticationError, AuthorizationError, get_current_user
 from shared.db import get_tenants_for_user
 from shared.response import error, success
 from shared.serialization import serialize_list

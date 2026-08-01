@@ -16,22 +16,10 @@ from typing import TYPE_CHECKING, Any, DefaultDict, cast
 
 from .. import _oids
 from .. import errors as e
-from .._struct import (
-    pack_float4,
-    pack_float8,
-    pack_int2,
-    pack_int4,
-    pack_int8,
-    pack_uint2,
-    pack_uint4,
-    unpack_float4,
-    unpack_float8,
-    unpack_int2,
-    unpack_int4,
-    unpack_int8,
-    unpack_uint4,
-)
-
+from .._struct import (pack_float4, pack_float8, pack_int2, pack_int4,
+                       pack_int8, pack_uint2, pack_uint4, unpack_float4,
+                       unpack_float8, unpack_int2, unpack_int4, unpack_int8,
+                       unpack_uint4)
 # Exposed here
 from .._wrappers import Float4 as Float4
 from .._wrappers import Float8 as Float8

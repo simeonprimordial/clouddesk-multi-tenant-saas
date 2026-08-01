@@ -14,12 +14,10 @@ import copy
 
 from botocore.compat import OrderedDict
 from botocore.endpoint import DEFAULT_TIMEOUT, MAX_POOL_CONNECTIONS
-from botocore.exceptions import (
-    InvalidMaxRetryAttemptsError,
-    InvalidRetryConfigurationError,
-    InvalidRetryModeError,
-    InvalidS3AddressingStyleError,
-)
+from botocore.exceptions import (InvalidMaxRetryAttemptsError,
+                                 InvalidRetryConfigurationError,
+                                 InvalidRetryModeError,
+                                 InvalidS3AddressingStyleError)
 
 
 class Config:

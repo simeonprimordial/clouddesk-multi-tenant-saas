@@ -4,11 +4,7 @@ from datetime import date, datetime, timezone
 from decimal import Decimal
 from uuid import UUID
 
-from shared.serialization import (
-    serialize_dict,
-    serialize_list,
-    serialize_value,
-)
+from shared.serialization import serialize_dict, serialize_list, serialize_value
 
 
 def test_serialize_uuid():

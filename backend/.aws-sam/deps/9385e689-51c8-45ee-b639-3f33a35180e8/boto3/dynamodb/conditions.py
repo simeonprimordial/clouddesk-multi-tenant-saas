@@ -13,11 +13,9 @@
 import re
 from collections import namedtuple
 
-from boto3.exceptions import (
-    DynamoDBNeedsConditionError,
-    DynamoDBNeedsKeyConditionError,
-    DynamoDBOperationNotSupportedError,
-)
+from boto3.exceptions import (DynamoDBNeedsConditionError,
+                              DynamoDBNeedsKeyConditionError,
+                              DynamoDBOperationNotSupportedError)
 
 ATTR_NAME_REGEX = re.compile(r"[^.\[\]]+(?![^\[]*\])")
 

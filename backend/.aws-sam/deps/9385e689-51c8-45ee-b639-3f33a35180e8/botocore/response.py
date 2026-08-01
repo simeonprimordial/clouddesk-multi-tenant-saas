@@ -16,18 +16,11 @@ import logging
 from io import IOBase
 
 from botocore import ScalarTypes  # noqa: F401
-from botocore import (
-    parsers,
-)
+from botocore import parsers
 from botocore.compat import XMLParseError  # noqa: F401
-from botocore.compat import (
-    set_socket_timeout,
-)
-from botocore.exceptions import (
-    IncompleteReadError,
-    ReadTimeoutError,
-    ResponseStreamingError,
-)
+from botocore.compat import set_socket_timeout
+from botocore.exceptions import (IncompleteReadError, ReadTimeoutError,
+                                 ResponseStreamingError)
 from botocore.hooks import first_non_none_response  # noqa
 from urllib3.exceptions import ProtocolError as URLLib3ProtocolError
 from urllib3.exceptions import ReadTimeoutError as URLLib3ReadTimeoutError

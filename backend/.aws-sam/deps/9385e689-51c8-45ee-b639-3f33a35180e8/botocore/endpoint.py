@@ -28,11 +28,8 @@ from botocore.hooks import first_non_none_response
 from botocore.httpchecksum import handle_checksum_body
 from botocore.httpsession import URLLib3Session
 from botocore.response import StreamingBody
-from botocore.utils import (
-    get_environ_proxies,
-    is_valid_endpoint_url,
-    is_valid_ipv6_endpoint_url,
-)
+from botocore.utils import (get_environ_proxies, is_valid_endpoint_url,
+                            is_valid_ipv6_endpoint_url)
 
 logger = logging.getLogger(__name__)
 history_recorder = get_global_history_recorder()

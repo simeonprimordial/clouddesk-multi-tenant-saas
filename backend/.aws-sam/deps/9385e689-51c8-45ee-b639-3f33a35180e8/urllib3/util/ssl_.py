@@ -54,21 +54,12 @@ _SSL_VERSION_TO_TLS_VERSION: dict[int, int] = {}
 
 try:  # Do we have ssl at all?
     import ssl
-    from ssl import (  # type: ignore[assignment]
-        CERT_REQUIRED,
-        HAS_NEVER_CHECK_COMMON_NAME,
-        OP_NO_COMPRESSION,
-        OP_NO_TICKET,
-        OPENSSL_VERSION,
-        PROTOCOL_TLS,
-        PROTOCOL_TLS_CLIENT,
-        VERIFY_X509_PARTIAL_CHAIN,
-        VERIFY_X509_STRICT,
-        OP_NO_SSLv2,
-        OP_NO_SSLv3,
-        SSLContext,
-        TLSVersion,
-    )
+    from ssl import (CERT_REQUIRED,  # type: ignore[assignment]
+                     HAS_NEVER_CHECK_COMMON_NAME, OP_NO_COMPRESSION,
+                     OP_NO_TICKET, OPENSSL_VERSION, PROTOCOL_TLS,
+                     PROTOCOL_TLS_CLIENT, VERIFY_X509_PARTIAL_CHAIN,
+                     VERIFY_X509_STRICT, OP_NO_SSLv2, OP_NO_SSLv3, SSLContext,
+                     TLSVersion)
 
     PROTOCOL_SSLv23 = PROTOCOL_TLS
 

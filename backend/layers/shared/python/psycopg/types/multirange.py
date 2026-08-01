@@ -21,15 +21,8 @@ from .._typeinfo import TypeInfo, TypesRegistry
 from ..abc import AdaptContext, Buffer, Dumper, DumperKey, QueryNoTemplate
 from ..adapt import PyFormat, RecursiveDumper, RecursiveLoader
 from ..pq import Format
-from .range import (
-    Range,
-    T,
-    dump_range_binary,
-    dump_range_text,
-    fail_dump,
-    load_range_binary,
-    load_range_text,
-)
+from .range import (Range, T, dump_range_binary, dump_range_text, fail_dump,
+                    load_range_binary, load_range_text)
 
 if TYPE_CHECKING:
     from .._connection_base import BaseConnection

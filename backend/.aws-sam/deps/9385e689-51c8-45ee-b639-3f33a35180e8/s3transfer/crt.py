@@ -20,19 +20,10 @@ import awscrt.http
 import awscrt.s3
 import botocore.awsrequest
 import botocore.session
-from awscrt.auth import (
-    AwsCredentials,
-    AwsCredentialsProvider,
-    AwsSigningAlgorithm,
-    AwsSigningConfig,
-)
-from awscrt.io import (
-    ClientBootstrap,
-    ClientTlsContext,
-    DefaultHostResolver,
-    EventLoopGroup,
-    TlsContextOptions,
-)
+from awscrt.auth import (AwsCredentials, AwsCredentialsProvider,
+                         AwsSigningAlgorithm, AwsSigningConfig)
+from awscrt.io import (ClientBootstrap, ClientTlsContext, DefaultHostResolver,
+                       EventLoopGroup, TlsContextOptions)
 from awscrt.s3 import S3Client, S3RequestTlsMode, S3RequestType
 from botocore import UNSIGNED
 from botocore.compat import urlsplit
@@ -43,13 +34,8 @@ from s3transfer.constants import FULL_OBJECT_CHECKSUM_ARGS, MB
 from s3transfer.exceptions import TransferNotDoneError
 from s3transfer.futures import BaseTransferFuture, BaseTransferMeta
 from s3transfer.manager import TransferManager
-from s3transfer.utils import (
-    CallArgs,
-    OSUtils,
-    create_nested_client,
-    get_callbacks,
-    is_s3express_bucket,
-)
+from s3transfer.utils import (CallArgs, OSUtils, create_nested_client,
+                              get_callbacks, is_s3express_bucket)
 
 logger = logging.getLogger(__name__)
 

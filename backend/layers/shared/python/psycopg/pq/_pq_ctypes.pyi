@@ -4,17 +4,8 @@ types stub for ctypes functions
 
 # Copyright (C) 2020 The Psycopg Team
 
-from ctypes import (
-    Array,
-    _Pointer,
-    c_char,
-    c_char_p,
-    c_int,
-    c_ubyte,
-    c_uint,
-    c_ulong,
-    pointer,
-)
+from ctypes import (Array, _Pointer, c_char, c_char_p, c_int, c_ubyte, c_uint,
+                    c_ulong, pointer)
 from typing import Any, Callable, Sequence
 
 class FILE: ...

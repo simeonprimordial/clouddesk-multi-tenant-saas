@@ -29,43 +29,27 @@ import botocore.compat
 import botocore.configloader
 import dateutil.parser
 from botocore import UNSIGNED
-from botocore.compat import (
-    EC,
-    compat_shell_split,
-    total_seconds,
-)
+from botocore.compat import EC, compat_shell_split, total_seconds
 from botocore.config import Config
-from botocore.exceptions import (
-    ConfigNotFound,
-    CredentialRetrievalError,
-    InfiniteLoopConfigError,
-    InvalidConfigError,
-    LoginError,
-    LoginInsufficientPermissions,
-    LoginRefreshRequired,
-    LoginTokenLoadError,
-    MetadataRetrievalError,
-    MissingDependencyException,
-    PartialCredentialsError,
-    RefreshWithMFAUnsupportedError,
-    UnauthorizedSSOTokenError,
-    UnknownCredentialError,
-)
+from botocore.exceptions import (ConfigNotFound, CredentialRetrievalError,
+                                 InfiniteLoopConfigError, InvalidConfigError,
+                                 LoginError, LoginInsufficientPermissions,
+                                 LoginRefreshRequired, LoginTokenLoadError,
+                                 MetadataRetrievalError,
+                                 MissingDependencyException,
+                                 PartialCredentialsError,
+                                 RefreshWithMFAUnsupportedError,
+                                 UnauthorizedSSOTokenError,
+                                 UnknownCredentialError)
 from botocore.tokens import SSOTokenProvider
 from botocore.useragent import register_feature_id, register_feature_ids
-from botocore.utils import (
-    ArnParser,
-    ContainerMetadataFetcher,
-    FileWebIdentityTokenLoader,
-    InstanceMetadataFetcher,
-    JSONFileCache,
-    LoginTokenLoader,
-    SSOTokenLoader,
-    create_nested_client,
-    get_login_token_cache_directory,
-    parse_key_val_file,
-    resolve_imds_endpoint_mode,
-)
+from botocore.utils import (ArnParser, ContainerMetadataFetcher,
+                            FileWebIdentityTokenLoader,
+                            InstanceMetadataFetcher, JSONFileCache,
+                            LoginTokenLoader, SSOTokenLoader,
+                            create_nested_client,
+                            get_login_token_cache_directory,
+                            parse_key_val_file, resolve_imds_endpoint_mode)
 from dateutil.parser import parse
 from dateutil.tz import tzlocal, tzutc
 

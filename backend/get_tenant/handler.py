@@ -2,14 +2,8 @@
 Return a single tenant belonging to the authenticated user.
 """
 
-from shared.auth import (
-    AuthenticationError,
-    get_current_user,
-)
-from shared.authorization import (
-    AuthorizationError,
-    require_membership,
-)
+from shared.auth import AuthenticationError, get_current_user
+from shared.authorization import AuthorizationError, require_membership
 from shared.db import get_tenant_by_id
 from shared.response import error, success
 from shared.serialization import serialize_dict

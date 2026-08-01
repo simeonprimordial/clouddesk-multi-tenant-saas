@@ -19,15 +19,8 @@ from .._compat import TypeVar
 from .._oids import INVALID_OID, TEXT_OID
 from .._struct import pack_len, unpack_len
 from .._typeinfo import TypeInfo, TypesRegistry
-from ..abc import (
-    AdaptContext,
-    Buffer,
-    Dumper,
-    DumperKey,
-    DumpFunc,
-    LoadFunc,
-    QueryNoTemplate,
-)
+from ..abc import (AdaptContext, Buffer, Dumper, DumperKey, DumpFunc, LoadFunc,
+                   QueryNoTemplate)
 from ..adapt import PyFormat, RecursiveDumper, RecursiveLoader
 from ..pq import Format
 

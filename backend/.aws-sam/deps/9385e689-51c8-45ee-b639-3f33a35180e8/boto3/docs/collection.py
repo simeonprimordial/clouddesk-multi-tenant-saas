@@ -14,10 +14,8 @@ import os
 
 from boto3.docs.base import NestedDocumenter
 from boto3.docs.method import document_model_driven_resource_method
-from boto3.docs.utils import (
-    add_resource_type_overview,
-    get_resource_ignore_params,
-)
+from boto3.docs.utils import (add_resource_type_overview,
+                              get_resource_ignore_params)
 from botocore import xform_name
 from botocore.docs.bcdoc.restdoc import DocumentStructure
 from botocore.docs.method import get_instance_public_methods

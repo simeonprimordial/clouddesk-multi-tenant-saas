@@ -16,18 +16,10 @@ from urllib.parse import parse_qsl
 
 from botocore.exceptions import ClientError
 from s3transfer.exceptions import S3CopyFailedError
-from s3transfer.tasks import (
-    CompleteMultipartUploadTask,
-    CreateMultipartUploadTask,
-    SubmissionTask,
-    Task,
-)
-from s3transfer.utils import (
-    ChunksizeAdjuster,
-    calculate_range_parameter,
-    get_callbacks,
-    get_filtered_dict,
-)
+from s3transfer.tasks import (CompleteMultipartUploadTask,
+                              CreateMultipartUploadTask, SubmissionTask, Task)
+from s3transfer.utils import (ChunksizeAdjuster, calculate_range_parameter,
+                              get_callbacks, get_filtered_dict)
 
 
 class CopySubmissionTask(SubmissionTask):

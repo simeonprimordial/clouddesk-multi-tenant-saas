@@ -13,22 +13,12 @@
 
 from io import BytesIO
 
-from botocore.auth import (
-    SIGNED_HEADERS_BLACKLIST,
-    STREAMING_UNSIGNED_PAYLOAD_TRAILER,
-    UNSIGNED_PAYLOAD,
-    BaseSigner,
-    _get_body_as_dict,
-    _host_from_url,
-)
-from botocore.compat import (
-    HTTPHeaders,
-    awscrt,
-    get_current_datetime,
-    parse_qs,
-    urlsplit,
-    urlunsplit,
-)
+from botocore.auth import (SIGNED_HEADERS_BLACKLIST,
+                           STREAMING_UNSIGNED_PAYLOAD_TRAILER,
+                           UNSIGNED_PAYLOAD, BaseSigner, _get_body_as_dict,
+                           _host_from_url)
+from botocore.compat import (HTTPHeaders, awscrt, get_current_datetime,
+                             parse_qs, urlsplit, urlunsplit)
 from botocore.exceptions import NoCredentialsError
 from botocore.useragent import register_feature_id
 from botocore.utils import percent_encode_sequence

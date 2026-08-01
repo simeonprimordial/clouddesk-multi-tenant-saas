@@ -16,18 +16,10 @@ from io import BytesIO
 from s3transfer.compat import readable, seekable
 from s3transfer.constants import FULL_OBJECT_CHECKSUM_ARGS
 from s3transfer.futures import IN_MEMORY_UPLOAD_TAG
-from s3transfer.tasks import (
-    CompleteMultipartUploadTask,
-    CreateMultipartUploadTask,
-    SubmissionTask,
-    Task,
-)
-from s3transfer.utils import (
-    ChunksizeAdjuster,
-    DeferredOpenFile,
-    get_callbacks,
-    get_filtered_dict,
-)
+from s3transfer.tasks import (CompleteMultipartUploadTask,
+                              CreateMultipartUploadTask, SubmissionTask, Task)
+from s3transfer.utils import (ChunksizeAdjuster, DeferredOpenFile,
+                              get_callbacks, get_filtered_dict)
 
 
 class AggregatedProgressCallback:

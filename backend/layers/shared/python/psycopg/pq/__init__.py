@@ -16,18 +16,10 @@ import os
 from collections.abc import Callable
 
 from . import abc
-from ._enums import (
-    ConnStatus,
-    DiagnosticField,
-    ExecStatus,
-    Format,
-    Ping,
-    PipelineStatus,
-    PollingStatus,
-    Trace,
-    TransactionStatus,
-)
-from .misc import ConninfoOption, PGnotify, PGresAttDesc, error_message, version_pretty
+from ._enums import (ConnStatus, DiagnosticField, ExecStatus, Format, Ping,
+                     PipelineStatus, PollingStatus, Trace, TransactionStatus)
+from .misc import (ConninfoOption, PGnotify, PGresAttDesc, error_message,
+                   version_pretty)
 
 logger = logging.getLogger(__name__)
 

@@ -13,12 +13,10 @@
 import os
 
 from boto3.docs.base import NestedDocumenter
-from boto3.docs.utils import (
-    add_resource_type_overview,
-    get_identifier_args_for_signature,
-    get_identifier_description,
-    get_identifier_values_for_example,
-)
+from boto3.docs.utils import (add_resource_type_overview,
+                              get_identifier_args_for_signature,
+                              get_identifier_description,
+                              get_identifier_values_for_example)
 from botocore import xform_name
 from botocore.docs.bcdoc.restdoc import DocumentStructure
 from botocore.utils import get_service_module_name

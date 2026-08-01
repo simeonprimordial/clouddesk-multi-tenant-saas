@@ -9,18 +9,8 @@ from __future__ import annotations
 import ctypes
 import ctypes.util
 import sys
-from ctypes import (
-    CFUNCTYPE,
-    POINTER,
-    Structure,
-    c_char,
-    c_char_p,
-    c_int,
-    c_size_t,
-    c_ubyte,
-    c_uint,
-    c_void_p,
-)
+from ctypes import (CFUNCTYPE, POINTER, Structure, c_char, c_char_p, c_int,
+                    c_size_t, c_ubyte, c_uint, c_void_p)
 from typing import Any, NoReturn
 
 from ..errors import NotSupportedError

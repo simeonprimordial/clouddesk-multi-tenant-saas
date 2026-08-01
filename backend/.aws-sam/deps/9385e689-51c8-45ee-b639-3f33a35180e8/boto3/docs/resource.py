@@ -13,20 +13,15 @@
 import os
 
 from boto3.docs.action import ActionDocumenter
-from boto3.docs.attr import (
-    document_attribute,
-    document_identifier,
-    document_reference,
-)
+from boto3.docs.attr import (document_attribute, document_identifier,
+                             document_reference)
 from boto3.docs.base import BaseDocumenter
 from boto3.docs.collection import CollectionDocumenter
 from boto3.docs.subresource import SubResourceDocumenter
-from boto3.docs.utils import (
-    add_resource_type_overview,
-    get_identifier_args_for_signature,
-    get_identifier_description,
-    get_identifier_values_for_example,
-)
+from boto3.docs.utils import (add_resource_type_overview,
+                              get_identifier_args_for_signature,
+                              get_identifier_description,
+                              get_identifier_values_for_example)
 from boto3.docs.waiter import WaiterResourceDocumenter
 from botocore import xform_name
 from botocore.docs.bcdoc.restdoc import DocumentStructure

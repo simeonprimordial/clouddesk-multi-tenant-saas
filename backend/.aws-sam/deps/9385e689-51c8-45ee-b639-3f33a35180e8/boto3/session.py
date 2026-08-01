@@ -19,11 +19,8 @@ import boto3.utils
 import botocore.session
 from boto3.exceptions import ResourceNotExistsError, UnknownAPIVersionError
 from botocore.client import Config
-from botocore.exceptions import (
-    DataNotFoundError,
-    NoCredentialsError,
-    UnknownServiceError,
-)
+from botocore.exceptions import (DataNotFoundError, NoCredentialsError,
+                                 UnknownServiceError)
 
 from .resources.factory import ResourceFactory
 

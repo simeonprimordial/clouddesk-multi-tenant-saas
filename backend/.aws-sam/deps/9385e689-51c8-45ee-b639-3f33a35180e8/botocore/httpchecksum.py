@@ -26,20 +26,15 @@ from binascii import crc32
 from hashlib import sha1, sha256, sha512
 
 from botocore.compat import HAS_CRT, has_minimum_crt_version, urlparse
-from botocore.exceptions import (
-    AwsChunkedWrapperError,
-    FlexibleChecksumError,
-    MissingDependencyException,
-)
+from botocore.exceptions import (AwsChunkedWrapperError, FlexibleChecksumError,
+                                 MissingDependencyException)
 from botocore.model import StructureShape
 from botocore.response import StreamingBody
 from botocore.useragent import register_feature_id
-from botocore.utils import (
-    conditionally_calculate_md5,
-    determine_content_length,
-    get_checksum_algorithm_headers,
-    has_checksum_header,
-)
+from botocore.utils import (conditionally_calculate_md5,
+                            determine_content_length,
+                            get_checksum_algorithm_headers,
+                            has_checksum_header)
 
 if HAS_CRT:
     from awscrt import checksums as crt_checksums

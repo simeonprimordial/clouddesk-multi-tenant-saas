@@ -8,25 +8,16 @@ from base64 import b64encode
 from concurrent.futures import CancelledError
 
 from urllib3 import PoolManager, Timeout, proxy_from_url
-from urllib3.exceptions import ConnectTimeoutError as URLLib3ConnectTimeoutError
-from urllib3.exceptions import (
-    LocationParseError,
-    NewConnectionError,
-    ProtocolError,
-    ProxyError,
-)
+from urllib3.exceptions import \
+    ConnectTimeoutError as URLLib3ConnectTimeoutError
+from urllib3.exceptions import (LocationParseError, NewConnectionError,
+                                ProtocolError, ProxyError)
 from urllib3.exceptions import ReadTimeoutError as URLLib3ReadTimeoutError
 from urllib3.exceptions import SSLError as URLLib3SSLError
 from urllib3.poolmanager import PoolKey
 from urllib3.util.retry import Retry
-from urllib3.util.ssl_ import (
-    OP_NO_COMPRESSION,
-    PROTOCOL_TLS,
-    OP_NO_SSLv2,
-    OP_NO_SSLv3,
-    is_ipaddress,
-    ssl,
-)
+from urllib3.util.ssl_ import (OP_NO_COMPRESSION, PROTOCOL_TLS, OP_NO_SSLv2,
+                               OP_NO_SSLv3, is_ipaddress, ssl)
 from urllib3.util.url import parse_url
 
 try:
@@ -42,7 +33,8 @@ try:
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=DeprecationWarning)
         # Always import the original SSLContext, even if it has been patched
-        from urllib3.contrib.pyopenssl import orig_util_SSLContext as SSLContext
+        from urllib3.contrib.pyopenssl import \
+            orig_util_SSLContext as SSLContext
 except (AttributeError, ImportError):
     from urllib3.util.ssl_ import SSLContext
 
@@ -55,23 +47,13 @@ except ImportError:
     DEFAULT_CIPHERS = None
 
 import botocore.awsrequest
-from botocore.compat import (
-    IPV6_ADDRZ_RE,
-    ensure_bytes,
-    filter_ssl_warnings,
-    unquote,
-    urlparse,
-)
-from botocore.exceptions import (
-    ConnectionClosedError,
-    ConnectTimeoutError,
-    EndpointConnectionError,
-    HTTPClientError,
-    InvalidProxiesConfigError,
-    ProxyConnectionError,
-    ReadTimeoutError,
-    SSLError,
-)
+from botocore.compat import (IPV6_ADDRZ_RE, ensure_bytes, filter_ssl_warnings,
+                             unquote, urlparse)
+from botocore.exceptions import (ConnectionClosedError, ConnectTimeoutError,
+                                 EndpointConnectionError, HTTPClientError,
+                                 InvalidProxiesConfigError,
+                                 ProxyConnectionError, ReadTimeoutError,
+                                 SSLError)
 
 filter_ssl_warnings()
 logger = logging.getLogger(__name__)

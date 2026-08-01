@@ -45,17 +45,9 @@ class _LazyIpaddress:
         global IPv4Network, IPv6Network
 
         if ip_address is None:
-            from ipaddress import (
-                IPv4Address,
-                IPv4Interface,
-                IPv4Network,
-                IPv6Address,
-                IPv6Interface,
-                IPv6Network,
-                ip_address,
-                ip_interface,
-                ip_network,
-            )
+            from ipaddress import (IPv4Address, IPv4Interface, IPv4Network,
+                                   IPv6Address, IPv6Interface, IPv6Network,
+                                   ip_address, ip_interface, ip_network)
 
 
 class InterfaceDumper(Dumper):

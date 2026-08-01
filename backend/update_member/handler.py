@@ -4,18 +4,10 @@ Update a tenant member's role.
 
 import json
 
-from shared.auth import (
-    AuthenticationError,
-    get_current_user,
-)
-from shared.authorization import (
-    AuthorizationError,
-    require_owner,
-)
-from shared.db import (
-    get_tenant_member,
-    update_tenant_member_role,
-)
+from shared.auth import AuthenticationError, get_current_user
+from shared.authorization import AuthorizationError, require_owner
+from shared.db import get_tenant_member, update_tenant_member_role
+from shared.observability import log_operation
 from shared.response import error, success
 from shared.serialization import serialize_dict
 
@@ -30,6 +22,14 @@ def lambda_handler(event, context):
 
     try:
         current_user = get_current_user(event)
+
+        log_operation(
+            "Update tenant member request received.",
+            event=event,
+            context=context,
+            outcome="started",
+            current_user=current_user,
+        )
 
         path_parameters = event.get("pathParameters", {})
 
@@ -87,6 +87,20 @@ def lambda_handler(event, context):
             role=role,
         )
 
+        log_operation(
+            "Tenant member role updated.",
+            event=event,
+            context=context,
+            outcome="success",
+            current_user=current_user,
+            status_code=200,
+            extra={
+                "tenant_id": tenant_id,
+                "target_user_id": user_id,
+                "new_role": role,
+            },
+        )
+
         return success(
             message="Tenant member updated successfully.",
             data=serialize_dict(membership),
@@ -105,6 +119,16 @@ def lambda_handler(event, context):
         )
 
     except Exception:
+
+        log_operation(
+            "Failed to update tenant member.",
+            event=event,
+            context=context,
+            outcome="failure",
+            current_user=None,
+            status_code=500,
+        )
+
         return error(
             message="Unable to update tenant member.",
             status_code=500,

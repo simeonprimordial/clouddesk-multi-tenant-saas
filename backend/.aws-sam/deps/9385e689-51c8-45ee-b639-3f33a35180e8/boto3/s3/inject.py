@@ -16,12 +16,8 @@ from functools import partial
 
 from boto3 import utils
 from boto3.compat import is_append_mode
-from boto3.s3.transfer import (
-    ProgressCallbackInvoker,
-    S3Transfer,
-    TransferConfig,
-    create_transfer_manager,
-)
+from boto3.s3.transfer import (ProgressCallbackInvoker, S3Transfer,
+                               TransferConfig, create_transfer_manager)
 from botocore.exceptions import ClientError
 
 try:

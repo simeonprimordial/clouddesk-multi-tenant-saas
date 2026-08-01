@@ -19,18 +19,13 @@ import botocore
 import botocore.auth
 from botocore.awsrequest import create_request_object, prepare_request_dict
 from botocore.compat import OrderedDict, get_current_datetime
-from botocore.exceptions import (
-    ParamValidationError,
-    UnknownClientMethodError,
-    UnknownSignatureVersionError,
-    UnsupportedSignatureVersionError,
-)
+from botocore.exceptions import (ParamValidationError,
+                                 UnknownClientMethodError,
+                                 UnknownSignatureVersionError,
+                                 UnsupportedSignatureVersionError)
 from botocore.tokens import FrozenAuthToken
 from botocore.utils import fix_s3_host  # noqa: F401
-from botocore.utils import (
-    ArnParser,
-    datetime2timestamp,
-)
+from botocore.utils import ArnParser, datetime2timestamp
 
 
 class RequestSigner:

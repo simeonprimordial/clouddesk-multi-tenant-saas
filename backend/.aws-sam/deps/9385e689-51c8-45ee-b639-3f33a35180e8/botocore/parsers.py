@@ -130,14 +130,9 @@ import struct
 
 from botocore.compat import ETree, XMLParseError
 from botocore.eventstream import EventStream, NoInitialResponseError
-from botocore.utils import (
-    CachedProperty,
-    ensure_boolean,
-    is_json_value_header,
-    lowercase_dict,
-    merge_dicts,
-    parse_timestamp,
-)
+from botocore.utils import (CachedProperty, ensure_boolean,
+                            is_json_value_header, lowercase_dict, merge_dicts,
+                            parse_timestamp)
 
 LOG = logging.getLogger(__name__)
 

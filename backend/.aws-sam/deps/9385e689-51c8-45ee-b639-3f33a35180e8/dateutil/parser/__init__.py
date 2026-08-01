@@ -1,14 +1,7 @@
 # -*- coding: utf-8 -*-
-from ._parser import (
-    DEFAULTPARSER,
-    DEFAULTTZPARSER,
-    ParserError,
-    UnknownTimezoneWarning,
-    __doc__,
-    parse,
-    parser,
-    parserinfo,
-)
+from ._parser import (DEFAULTPARSER, DEFAULTTZPARSER, ParserError,
+                      UnknownTimezoneWarning, __doc__, parse, parser,
+                      parserinfo)
 from .isoparser import isoparse, isoparser
 
 __all__ = [

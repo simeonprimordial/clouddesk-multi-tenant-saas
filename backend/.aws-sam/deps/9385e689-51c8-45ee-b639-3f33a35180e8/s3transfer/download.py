@@ -16,24 +16,15 @@ import threading
 
 from botocore.exceptions import ClientError
 from s3transfer.compat import seekable
-from s3transfer.exceptions import (
-    RetriesExceededError,
-    S3DownloadFailedError,
-    S3ValidationError,
-)
+from s3transfer.exceptions import (RetriesExceededError, S3DownloadFailedError,
+                                   S3ValidationError)
 from s3transfer.futures import IN_MEMORY_DOWNLOAD_TAG
 from s3transfer.tasks import SubmissionTask, Task
-from s3transfer.utils import (
-    S3_RETRYABLE_DOWNLOAD_ERRORS,
-    CountCallbackInvoker,
-    DeferredOpenFile,
-    FunctionContainer,
-    StreamReaderProgress,
-    calculate_num_parts,
-    calculate_range_parameter,
-    get_callbacks,
-    invoke_progress_callbacks,
-)
+from s3transfer.utils import (S3_RETRYABLE_DOWNLOAD_ERRORS,
+                              CountCallbackInvoker, DeferredOpenFile,
+                              FunctionContainer, StreamReaderProgress,
+                              calculate_num_parts, calculate_range_parameter,
+                              get_callbacks, invoke_progress_callbacks)
 
 logger = logging.getLogger(__name__)
 

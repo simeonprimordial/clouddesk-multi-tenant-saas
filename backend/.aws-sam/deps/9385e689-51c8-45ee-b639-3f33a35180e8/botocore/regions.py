@@ -24,29 +24,22 @@ from enum import Enum
 
 import jmespath
 from botocore import UNSIGNED, xform_name
-from botocore.auth import (
-    AUTH_TYPE_MAPS,
-    HAS_CRT,
-    resolve_auth_scheme_preference,
-)
+from botocore.auth import (AUTH_TYPE_MAPS, HAS_CRT,
+                           resolve_auth_scheme_preference)
 from botocore.crt import CRT_SUPPORTED_AUTH_TYPES
 from botocore.endpoint_provider import S3_UNREFERENCED_PARAMS, EndpointProvider
-from botocore.exceptions import (
-    EndpointProviderError,
-    EndpointVariantError,
-    InvalidEndpointConfigurationError,
-    InvalidHostLabelError,
-    MissingDependencyException,
-    NoRegionError,
-    ParamValidationError,
-    UnknownEndpointResolutionBuiltInName,
-    UnknownRegionError,
-    UnknownSignatureVersionError,
-    UnsupportedS3AccesspointConfigurationError,
-    UnsupportedS3ConfigurationError,
-    UnsupportedS3ControlArnError,
-    UnsupportedS3ControlConfigurationError,
-)
+from botocore.exceptions import (EndpointProviderError, EndpointVariantError,
+                                 InvalidEndpointConfigurationError,
+                                 InvalidHostLabelError,
+                                 MissingDependencyException, NoRegionError,
+                                 ParamValidationError,
+                                 UnknownEndpointResolutionBuiltInName,
+                                 UnknownRegionError,
+                                 UnknownSignatureVersionError,
+                                 UnsupportedS3AccesspointConfigurationError,
+                                 UnsupportedS3ConfigurationError,
+                                 UnsupportedS3ControlArnError,
+                                 UnsupportedS3ControlConfigurationError)
 from botocore.useragent import register_feature_id
 from botocore.utils import ensure_boolean, instance_cache
 

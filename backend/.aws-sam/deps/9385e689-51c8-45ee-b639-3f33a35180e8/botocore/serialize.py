@@ -52,12 +52,8 @@ from botocore import validate
 from botocore.compat import formatdate
 from botocore.exceptions import ParamValidationError
 from botocore.useragent import register_feature_id
-from botocore.utils import (
-    has_header,
-    is_json_value_header,
-    parse_to_aware_datetime,
-    percent_encode,
-)
+from botocore.utils import (has_header, is_json_value_header,
+                            parse_to_aware_datetime, percent_encode)
 
 # From the spec, the default timestamp format if not specified is iso8601.
 DEFAULT_TIMESTAMP_FORMAT = "iso8601"

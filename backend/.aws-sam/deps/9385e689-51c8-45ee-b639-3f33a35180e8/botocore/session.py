@@ -27,55 +27,31 @@ import botocore.client
 import botocore.configloader
 import botocore.credentials
 import botocore.tokens
-from botocore import (
-    UNSIGNED,
-    __version__,
-    handlers,
-    invoke_initializers,
-    monitoring,
-    paginate,
-    retryhandler,
-    translate,
-    waiter,
-)
+from botocore import (UNSIGNED, __version__, handlers, invoke_initializers,
+                      monitoring, paginate, retryhandler, translate, waiter)
 from botocore.compat import HAS_CRT  # noqa: F401
-from botocore.compat import (
-    MutableMapping,
-)
-from botocore.configprovider import (
-    BOTOCORE_DEFAUT_SESSION_VARIABLES,
-    ConfigChainFactory,
-    ConfiguredEndpointProvider,
-    ConfigValueStore,
-    DefaultConfigResolver,
-    SmartDefaultsConfigStoreFactory,
-    create_botocore_default_config_mapping,
-)
+from botocore.compat import MutableMapping
+from botocore.configprovider import (BOTOCORE_DEFAUT_SESSION_VARIABLES,
+                                     ConfigChainFactory,
+                                     ConfiguredEndpointProvider,
+                                     ConfigValueStore, DefaultConfigResolver,
+                                     SmartDefaultsConfigStoreFactory,
+                                     create_botocore_default_config_mapping)
 from botocore.context import get_context, with_current_context
 from botocore.errorfactory import ClientExceptionsFactory
-from botocore.exceptions import (
-    ConfigNotFound,
-    InvalidDefaultsMode,
-    PartialCredentialsError,
-    ProfileNotFound,
-    UnknownServiceError,
-)
-from botocore.hooks import (
-    EventAliaser,
-    HierarchicalEmitter,
-    first_non_none_response,
-)
+from botocore.exceptions import (ConfigNotFound, InvalidDefaultsMode,
+                                 PartialCredentialsError, ProfileNotFound,
+                                 UnknownServiceError)
+from botocore.hooks import (EventAliaser, HierarchicalEmitter,
+                            first_non_none_response)
 from botocore.loaders import create_loader
 from botocore.model import ServiceModel
 from botocore.parsers import ResponseParserFactory
 from botocore.plugin import get_botocore_plugins, load_client_plugins
 from botocore.regions import EndpointResolver
 from botocore.useragent import UserAgentString, register_feature_id
-from botocore.utils import (
-    EVENT_ALIASES,
-    IMDSRegionProvider,
-    validate_region_name,
-)
+from botocore.utils import (EVENT_ALIASES, IMDSRegionProvider,
+                            validate_region_name)
 
 logger = logging.getLogger(__name__)
 

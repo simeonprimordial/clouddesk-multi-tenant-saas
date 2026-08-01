@@ -19,7 +19,8 @@ from .._cmodule import _psycopg
 from .._oids import INVALID_OID, TEXT_ARRAY_OID, TEXT_OID
 from .._struct import pack_len, unpack_len
 from .._typeinfo import TypeInfo
-from ..abc import AdaptContext, Buffer, Dumper, DumperKey, Loader, NoneType, Transformer
+from ..abc import (AdaptContext, Buffer, Dumper, DumperKey, Loader, NoneType,
+                   Transformer)
 from ..adapt import PyFormat, RecursiveDumper, RecursiveLoader
 
 _struct_head = struct.Struct("!III")  # ndims, hasnull, elem oid

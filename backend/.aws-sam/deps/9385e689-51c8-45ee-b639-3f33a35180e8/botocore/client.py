@@ -13,41 +13,29 @@
 import logging
 
 from botocore import UNSIGNED  # noqa: F401
-from botocore import (
-    waiter,
-    xform_name,
-)
+from botocore import waiter, xform_name
 from botocore.args import ClientArgsCreator
-from botocore.auth import (
-    AUTH_TYPE_MAPS,
-    resolve_auth_scheme_preference,
-    resolve_auth_type,
-)
+from botocore.auth import (AUTH_TYPE_MAPS, resolve_auth_scheme_preference,
+                           resolve_auth_type)
 from botocore.awsrequest import prepare_request_dict
 from botocore.compress import maybe_compress_request
 from botocore.config import Config
 from botocore.context import with_current_context
 from botocore.credentials import RefreshableCredentials
-from botocore.discovery import (
-    EndpointDiscoveryHandler,
-    EndpointDiscoveryManager,
-    block_endpoint_discovery_required_operations,
-)
+from botocore.discovery import (EndpointDiscoveryHandler,
+                                EndpointDiscoveryManager,
+                                block_endpoint_discovery_required_operations)
 from botocore.docs.docstring import ClientMethodDocstring, PaginatorDocstring
 from botocore.exceptions import ClientError  # noqa: F401
-from botocore.exceptions import (
-    DataNotFoundError,
-    InvalidEndpointDiscoveryConfigurationError,
-    OperationNotPageableError,
-    UnknownServiceError,
-    UnknownSignatureVersionError,
-)
+from botocore.exceptions import (DataNotFoundError,
+                                 InvalidEndpointDiscoveryConfigurationError,
+                                 OperationNotPageableError,
+                                 UnknownServiceError,
+                                 UnknownSignatureVersionError)
 from botocore.history import get_global_history_recorder
 from botocore.hooks import first_non_none_response
-from botocore.httpchecksum import (
-    apply_request_checksum,
-    resolve_checksum_context,
-)
+from botocore.httpchecksum import (apply_request_checksum,
+                                   resolve_checksum_context)
 from botocore.model import ServiceModel
 from botocore.paginate import Paginator
 from botocore.retries import adaptive, standard
@@ -57,15 +45,10 @@ from botocore.utils import S3ControlArnParamHandler  # noqa: F401
 from botocore.utils import S3ControlEndpointSetter  # noqa: F401
 from botocore.utils import S3EndpointSetter  # noqa: F401
 from botocore.utils import S3RegionRedirector  # noqa: F401
-from botocore.utils import (
-    CachedProperty,
-    EventbridgeSignerSetter,
-    S3ControlArnParamHandlerv2,
-    S3ExpressIdentityResolver,
-    S3RegionRedirectorv2,
-    ensure_boolean,
-    get_service_module_name,
-)
+from botocore.utils import (CachedProperty, EventbridgeSignerSetter,
+                            S3ControlArnParamHandlerv2,
+                            S3ExpressIdentityResolver, S3RegionRedirectorv2,
+                            ensure_boolean, get_service_module_name)
 
 logger = logging.getLogger(__name__)
 history_recorder = get_global_history_recorder()

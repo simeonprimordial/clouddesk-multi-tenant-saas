@@ -14,17 +14,13 @@ import os
 
 from boto3.docs.base import NestedDocumenter
 from boto3.docs.method import document_model_driven_resource_method
-from boto3.docs.utils import (
-    add_resource_type_overview,
-    get_resource_ignore_params,
-    get_resource_public_actions,
-)
+from boto3.docs.utils import (add_resource_type_overview,
+                              get_resource_ignore_params,
+                              get_resource_public_actions)
 from botocore import xform_name
 from botocore.docs.bcdoc.restdoc import DocumentStructure
-from botocore.docs.method import (
-    document_custom_method,
-    document_model_driven_method,
-)
+from botocore.docs.method import (document_custom_method,
+                                  document_model_driven_method)
 from botocore.model import OperationModel
 from botocore.utils import get_service_module_name
 

@@ -9,12 +9,8 @@ from enum import Enum
 from .._adapters_map import AdaptersMap
 from .._oids import TEXT_OID
 from .._typeinfo import TypeInfo, TypesRegistry
-from .._typemod import (
-    BitTypeModifier,
-    CharTypeModifier,
-    NumericTypeModifier,
-    TimeTypeModifier,
-)
+from .._typemod import (BitTypeModifier, CharTypeModifier, NumericTypeModifier,
+                        TimeTypeModifier)
 from ..abc import AdaptContext, NoneType
 from ..types.enum import EnumBinaryDumper, EnumDumper
 from ..types.none import NoneDumper
@@ -58,7 +54,8 @@ def register_crdb_adapters(context: AdaptContext) -> None:
 def _register_postgres_adapters(context: AdaptContext) -> None:
     # Same adapters used by PostgreSQL, or a good starting point for customization
 
-    from ..types import array, bool, composite, datetime, numeric, numpy, string, uuid
+    from ..types import (array, bool, composite, datetime, numeric, numpy,
+                         string, uuid)
 
     array.register_default_adapters(context)
     composite.register_default_adapters(context)

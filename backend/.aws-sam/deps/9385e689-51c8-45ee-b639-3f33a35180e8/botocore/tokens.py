@@ -21,19 +21,11 @@ import dateutil.parser
 from botocore import UNSIGNED
 from botocore.compat import total_seconds
 from botocore.config import Config
-from botocore.exceptions import (
-    ClientError,
-    InvalidConfigError,
-    TokenRetrievalError,
-    UnknownTokenProviderError,
-)
-from botocore.utils import (
-    CachedProperty,
-    JSONFileCache,
-    SSOTokenLoader,
-    create_nested_client,
-    get_token_from_environment,
-)
+from botocore.exceptions import (ClientError, InvalidConfigError,
+                                 TokenRetrievalError,
+                                 UnknownTokenProviderError)
+from botocore.utils import (CachedProperty, JSONFileCache, SSOTokenLoader,
+                            create_nested_client, get_token_from_environment)
 from dateutil.tz import tzutc
 
 logger = logging.getLogger(__name__)

@@ -29,15 +29,10 @@ from typing import NamedTuple
 from botocore import xform_name
 from botocore.compat import IPV4_RE, quote, urlparse
 from botocore.exceptions import EndpointResolutionError
-from botocore.utils import (
-    ArnParser,
-    InvalidArnException,
-    is_valid_ipv4_endpoint_url,
-    is_valid_ipv6_endpoint_url,
-    lru_cache_weakref,
-    normalize_url_path,
-    percent_encode,
-)
+from botocore.utils import (ArnParser, InvalidArnException,
+                            is_valid_ipv4_endpoint_url,
+                            is_valid_ipv6_endpoint_url, lru_cache_weakref,
+                            normalize_url_path, percent_encode)
 
 logger = logging.getLogger(__name__)
 

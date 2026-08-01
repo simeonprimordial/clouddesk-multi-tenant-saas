@@ -17,17 +17,12 @@ from typing import NamedTuple
 
 from botocore.auth import resolve_auth_type
 from botocore.compat import OrderedDict
-from botocore.exceptions import (
-    MissingServiceIdError,
-    UndefinedModelAttributeError,
-    UnsupportedServiceProtocolsError,
-)
-from botocore.utils import (
-    PRIORITY_ORDERED_SUPPORTED_PROTOCOLS,
-    CachedProperty,
-    hyphenize_service_id,
-    instance_cache,
-)
+from botocore.exceptions import (MissingServiceIdError,
+                                 UndefinedModelAttributeError,
+                                 UnsupportedServiceProtocolsError)
+from botocore.utils import (PRIORITY_ORDERED_SUPPORTED_PROTOCOLS,
+                            CachedProperty, hyphenize_service_id,
+                            instance_cache)
 
 NOT_SET = object()
 

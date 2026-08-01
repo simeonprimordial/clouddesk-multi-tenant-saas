@@ -15,21 +15,9 @@ from __future__ import annotations
 import logging
 import sys
 from collections.abc import Callable, Sequence
-from ctypes import (
-    POINTER,
-    Array,
-    addressof,
-    byref,
-    c_char_p,
-    c_int,
-    c_size_t,
-    c_ulong,
-    c_void_p,
-    cast,
-    create_string_buffer,
-    py_object,
-    string_at,
-)
+from ctypes import (POINTER, Array, addressof, byref, c_char_p, c_int,
+                    c_size_t, c_ulong, c_void_p, cast, create_string_buffer,
+                    py_object, string_at)
 from os import getpid
 from typing import TYPE_CHECKING, Any
 from typing import cast as t_cast
@@ -39,13 +27,8 @@ from .. import errors as e
 from .._encodings import pg2pyenc
 from . import _pq_ctypes as impl
 from ._enums import ConnStatus, ExecStatus, Format, Trace
-from .misc import (
-    ConninfoOption,
-    PGnotify,
-    PGresAttDesc,
-    _clean_error_message,
-    connection_summary,
-)
+from .misc import (ConninfoOption, PGnotify, PGresAttDesc,
+                   _clean_error_message, connection_summary)
 
 if TYPE_CHECKING:
     from . import abc

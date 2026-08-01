@@ -11,7 +11,6 @@ from typing import TYPE_CHECKING, Any
 
 from . import abc, pq
 from ._adapters_map import AdaptersMap as AdaptersMap  # noqa: F401 # reexport
-
 # Objects exported here
 from ._enums import PyFormat as PyFormat
 from ._transformer import Transformer as Transformer

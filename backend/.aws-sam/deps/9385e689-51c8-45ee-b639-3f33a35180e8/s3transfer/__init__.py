@@ -138,9 +138,8 @@ from logging import NullHandler
 import s3transfer.compat
 from botocore.compat import six  # noqa: F401
 from botocore.exceptions import IncompleteReadError, ResponseStreamingError
-from botocore.vendored.requests.packages.urllib3.exceptions import (
-    ReadTimeoutError,
-)
+from botocore.vendored.requests.packages.urllib3.exceptions import \
+    ReadTimeoutError
 from s3transfer.exceptions import RetriesExceededError, S3UploadFailedError
 
 __author__ = "Amazon Web Services"

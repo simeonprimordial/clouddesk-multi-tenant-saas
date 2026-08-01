@@ -11,7 +11,8 @@ import socket
 from random import shuffle
 
 from . import errors as e
-from ._conninfo_utils import get_param, get_param_def, is_ip_address, split_attempts
+from ._conninfo_utils import (get_param, get_param_def, is_ip_address,
+                              split_attempts)
 from .abc import ConnDict, ConnMapping
 
 if True:  # ASYNC:
