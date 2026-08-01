@@ -70,6 +70,7 @@ jobs:
           VpcId=vpc-0f5bbd66ff9fa24f8
           RdsSecurityGroupId=sg-05dc391dd52d0d63b
           LambdaSubnetIds="subnet-078f2418a092901fd,subnet-045b3b611cdf127b0"
+          AlarmEmail="${{ vars.ALARM_EMAIL }}"
           --no-confirm-changeset
           --no-fail-on-empty-changeset
       - name: Configure CloudWatch log retention
