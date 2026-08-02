@@ -213,8 +213,6 @@ flowchart TB
 ```
 
 ![CloudDesk Solution Architecture](docs/diagrams/01-solution-architecture.svg)
-![CloudDesk Deployment Architecture](docs/diagrams/02-deployment-architecture.svg)
-![CloudDesk Request Lifecycle](docs/diagrams/06-request-lifecycle.svg)
 
 ### Core AWS components
 
@@ -263,6 +261,7 @@ sequenceDiagram
     Lambda-->>API: Standard JSON response
     API-->>Client: HTTPS response
 ```
+![CloudDesk Deployment Architecture](docs/diagrams/02-deployment-architecture.svg)
 
 API Gateway performs JWT validation before protected Lambda functions run. Lambda consumes the trusted claims supplied in the API Gateway event and maps the Cognito identity to the corresponding CloudDesk user.
 
@@ -279,6 +278,7 @@ flowchart LR
     Confirm --> Trigger[Post Confirmation Lambda]
     Trigger --> Users[(CloudDesk users table)]
 ```
+![CloudDesk Request Lifecycle](docs/diagrams/06-request-lifecycle.svg)
 
 ### Cognito manages
 
