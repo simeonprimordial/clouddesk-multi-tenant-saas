@@ -1,161 +1,573 @@
-# Architecture Decision Records (ADR)
+# CloudDesk Engineering Decisions
 
-This document records the major architectural and engineering decisions made during the development of CloudDesk.
-
-The purpose of these records is to explain **why** a particular technology or design was chosen, what alternatives were considered, and the trade-offs involved.
+> Architecture Decision Records for the CloudDesk multi-tenant SaaS backend.
 
 ---
 
-# ADR-001 — Serverless Architecture
+## Document Status
+
+| Field | Value |
+|---|---|
+| Project | CloudDesk Multi-Tenant SaaS Backend |
+| Environment | `dev` |
+| AWS Region | `us-east-1` |
+| Infrastructure as Code | AWS SAM |
+| Runtime | Python 3.13 |
+| Database | Amazon RDS for PostgreSQL |
+| Status | Active |
+
+This document records the major engineering decisions made during CloudDesk.
+
+The goal is not only to document what was chosen, but also:
+
+- why it was chosen;
+- which alternatives were considered;
+- what trade-offs were accepted;
+- what conditions would justify revisiting the decision.
+
+---
+
+## Decision Format
+
+Each decision follows this structure:
+
+- **Status**
+- **Context**
+- **Decision**
+- **Rationale**
+- **Alternatives considered**
+- **Consequences**
+- **Revisit when**
+
+---
+
+# ADR-001: Use a Multi-Tenant Shared Application Architecture
 
 ## Status
 
-Accepted
-
-## Decision
-
-CloudDesk uses a serverless architecture based on:
-
-- Amazon API Gateway HTTP API
-- AWS Lambda
-- AWS SAM
+Accepted.
 
 ## Context
 
-CloudDesk is an API-driven SaaS application with unpredictable traffic patterns and relatively lightweight request processing.
+CloudDesk must support multiple customer organizations while using one backend platform.
 
-The objective is to build a scalable backend without managing application servers.
+The system must allow:
 
-## Alternatives Considered
+- one user to belong to multiple tenants;
+- one tenant to contain multiple users;
+- different roles per tenant;
+- strict prevention of cross-tenant access.
 
-- Amazon ECS
-- Amazon EKS
-- EC2 with Nginx/Gunicorn
+## Decision
+
+Use a shared application and shared PostgreSQL database with logical tenant isolation enforced through the `tenant_users` membership model and application authorization.
 
 ## Rationale
 
-A serverless architecture provides:
+This is the simplest architecture that satisfies the current business requirements.
 
-- automatic scaling;
-- no server management;
-- pay-per-use pricing;
-- faster deployment;
-- native AWS integration.
-
-Container orchestration would introduce operational complexity without solving a current business requirement.
-
----
-
-# ADR-002 — Infrastructure as Code
-
-## Status
-
-Accepted
-
-## Decision
-
-AWS SAM was selected as the Infrastructure as Code tool.
-
-## Context
-
-CloudDesk consists primarily of Lambda functions, API Gateway, Cognito resources, IAM roles, Lambda Layers, and CloudFormation-managed infrastructure.
+It avoids creating separate infrastructure or databases for every tenant while still allowing CloudDesk to enforce tenant-specific access.
 
 ## Alternatives Considered
 
-- Terraform
-- AWS CDK
+### Database per tenant
+
+Rejected because it would:
+
+- increase provisioning complexity;
+- increase cost;
+- complicate migrations;
+- complicate monitoring;
+- be unnecessary for the current scale.
+
+### Schema per tenant
+
+Rejected because it would:
+
+- complicate query management;
+- increase migration complexity;
+- add operational overhead without solving a demonstrated requirement.
+
+## Consequences
+
+Positive:
+
+- lower infrastructure cost;
+- simpler deployment;
+- easier centralized reporting;
+- simpler schema management.
+
+Negative:
+
+- tenant isolation depends on consistent authorization and query discipline;
+- a coding error could create a cross-tenant exposure risk.
+
+## Revisit When
+
+- regulatory requirements demand stronger physical separation;
+- enterprise tenants require dedicated infrastructure;
+- tenant size or performance isolation becomes a problem;
+- contractual requirements demand separate databases.
+
+---
+
+# ADR-002: Use PostgreSQL for Application Data
+
+## Status
+
+Accepted.
+
+## Context
+
+CloudDesk must store:
+
+- users;
+- tenants;
+- many-to-many memberships;
+- tenant roles;
+- membership status;
+- timestamps;
+- transactional tenant creation.
+
+## Decision
+
+Use Amazon RDS for PostgreSQL.
 
 ## Rationale
 
-AWS SAM provides first-class support for serverless resources while generating standard CloudFormation templates.
+PostgreSQL is a strong fit because CloudDesk depends on:
 
-Using Terraform alongside SAM would require maintaining two Infrastructure as Code solutions for the same application, increasing complexity without providing additional value.
+- relational joins;
+- transactions;
+- foreign keys;
+- uniqueness constraints;
+- many-to-many relationships;
+- role and membership queries;
+- strong consistency.
 
-Terraform may be introduced in future projects where it better aligns with the infrastructure requirements.
-
----
-
-# ADR-003 — API Gateway HTTP API
-
-## Status
-
-Accepted
-
-## Decision
-
-Use Amazon API Gateway HTTP API.
-
-## Context
-
-CloudDesk exposes REST-style endpoints but does not require advanced REST API features such as usage plans, API keys, request validation models, or request transformation.
+Tenant creation and owner membership must be committed together.
 
 ## Alternatives Considered
 
-- API Gateway REST API
+### DynamoDB
+
+Rejected because the current data model is relational and transaction-heavy.
+
+DynamoDB could support the workload, but it would require more complex access-pattern design and denormalization without a demonstrated scaling need.
+
+### Aurora PostgreSQL
+
+Rejected for the current stage because:
+
+- the workload does not justify its additional cost and operational scope;
+- standard RDS PostgreSQL satisfies the requirements.
+
+## Consequences
+
+Positive:
+
+- strong relational integrity;
+- simple membership queries;
+- transactional operations;
+- mature SQL ecosystem.
+
+Negative:
+
+- database connections become the primary scaling constraint;
+- RDS introduces continuous baseline cost;
+- Lambda concurrency must be monitored against connection capacity.
+
+## Revisit When
+
+- workload growth justifies Aurora;
+- read scale requires replicas;
+- availability requirements justify Multi-AZ changes;
+- connection pressure requires RDS Proxy.
+
+---
+
+# ADR-003: Separate Cognito Identity from CloudDesk Application Users
+
+## Status
+
+Accepted.
+
+## Context
+
+Amazon Cognito manages authentication, but CloudDesk also needs application-specific user data.
+
+## Decision
+
+Store Cognito identities in Cognito and maintain a separate `users` record in PostgreSQL.
+
+The Cognito subject maps the identity to the CloudDesk user.
+
+## Rationale
+
+Authentication and application data serve different purposes.
+
+Cognito should manage:
+
+- credentials;
+- account confirmation;
+- token issuance;
+- identity claims.
+
+PostgreSQL should manage:
+
+- application user ID;
+- tenant membership;
+- tenant roles;
+- user status;
+- application profile fields.
+
+## Alternatives Considered
+
+### Store all application data in Cognito attributes
+
+Rejected because Cognito is not a relational application database and does not model tenant memberships well.
+
+### Create user records lazily during the first API call
+
+Rejected because it would mix provisioning with request handling and create more runtime complexity.
+
+## Consequences
+
+Positive:
+
+- clear separation of responsibilities;
+- relational application data remains in PostgreSQL;
+- Cognito can be replaced more easily in the future.
+
+Negative:
+
+- identity synchronization must be handled;
+- provisioning failures can leave a confirmed Cognito user without an application record.
+
+## Revisit When
+
+- a different identity provider is introduced;
+- federation becomes a requirement;
+- provisioning needs compensation or retry workflows.
+
+---
+
+# ADR-004: Use Cognito Post Confirmation for User Provisioning
+
+## Status
+
+Accepted.
+
+## Context
+
+CloudDesk requires every confirmed Cognito user to have a PostgreSQL application-user record.
+
+## Decision
+
+Use the Cognito Post Confirmation trigger to invoke a user-provisioning Lambda.
+
+## Rationale
+
+The event occurs at the correct lifecycle point: after the user confirms the account.
+
+It avoids performing synchronization during every protected API request.
+
+## Alternatives Considered
+
+### Provision on first `/me` request
+
+Rejected because:
+
+- it mixes reads with provisioning;
+- it introduces additional runtime branching;
+- it makes user-state behavior less predictable.
+
+### Scheduled synchronization
+
+Rejected because:
+
+- it delays user availability;
+- it adds unnecessary operational complexity.
+
+## Consequences
+
+Positive:
+
+- user records are created early;
+- API request flow remains simpler;
+- provisioning is event-driven.
+
+Negative:
+
+- Post Confirmation failures must be investigated;
+- retry and compensation behavior is limited.
+
+## Revisit When
+
+- asynchronous retry is required;
+- external user sources are introduced;
+- invitation flows need more complex provisioning.
+
+---
+
+# ADR-005: Use API Gateway HTTP API
+
+## Status
+
+Accepted.
+
+## Context
+
+CloudDesk needs a public HTTPS API with JWT authorization and Lambda integration.
+
+## Decision
+
+Use Amazon API Gateway HTTP API instead of REST API.
 
 ## Rationale
 
 HTTP API provides:
 
-- lower cost;
-- lower latency;
-- simpler configuration;
-- native JWT authorization.
-
-REST API remains a good choice for applications that require advanced API management capabilities.
-
----
-
-# ADR-004 — Authentication
-
-## Status
-
-Accepted
-
-## Decision
-
-Amazon Cognito manages user authentication.
-
-## Context
-
-CloudDesk requires:
-
-- user registration;
-- login;
-- password management;
-- secure token issuance.
+- Lambda integrations;
+- JWT authorizers;
+- lower operational complexity;
+- lower cost than REST API;
+- sufficient routing for the current project.
 
 ## Alternatives Considered
 
-- Custom JWT implementation
-- Auth0
-- Keycloak
+### API Gateway REST API
 
-## Rationale
+Rejected because the project does not currently require:
 
-Amazon Cognito is a managed AWS service that integrates directly with API Gateway and eliminates the need to implement authentication logic from scratch.
+- usage plans;
+- advanced request transformations;
+- API keys;
+- REST API-specific integrations.
+
+### Application Load Balancer
+
+Rejected because the application is Lambda-first and HTTP API provides a better fit.
+
+## Consequences
+
+Positive:
+
+- simpler API layer;
+- lower cost;
+- native JWT authorizer.
+
+Negative:
+
+- fewer advanced API-management capabilities.
+
+## Revisit When
+
+- usage plans are required;
+- complex request transformation is needed;
+- API key management becomes a requirement.
 
 ---
 
-# ADR-005 — Authorization Model
+# ADR-006: Use AWS Lambda for Compute
 
 ## Status
 
-Accepted
-
-## Decision
-
-Separate authentication from authorization.
+Accepted.
 
 ## Context
 
-Authentication determines the user's identity.
-
-Authorization determines what the authenticated user may do.
+CloudDesk consists of event-driven API operations with variable demand.
 
 ## Decision
 
-Authorization is implemented through reusable helper functions:
+Implement each API operation as a focused AWS Lambda function.
+
+## Rationale
+
+Lambda provides:
+
+- automatic scaling;
+- no server management;
+- usage-based compute;
+- direct integration with API Gateway;
+- strong fit for stateless request handlers.
+
+## Alternatives Considered
+
+### EC2
+
+Rejected because it would require server management, patching, scaling, and continuous compute cost.
+
+### ECS or Fargate
+
+Rejected because the application does not require long-running containers.
+
+### EKS or Kubernetes
+
+Rejected because it would add major operational complexity without solving a current problem.
+
+## Consequences
+
+Positive:
+
+- low operational overhead;
+- independent handlers;
+- automatic scaling;
+- straightforward SAM deployment.
+
+Negative:
+
+- cold starts;
+- database connection pressure;
+- distributed logs;
+- runtime package constraints.
+
+## Revisit When
+
+- long-running workloads appear;
+- persistent connections are required;
+- workload economics favor containers;
+- Lambda limits become restrictive.
+
+---
+
+# ADR-007: Use One Lambda Function per Business Operation
+
+## Status
+
+Accepted.
+
+## Context
+
+CloudDesk exposes multiple operations across users, tenants, and memberships.
+
+## Decision
+
+Use focused Lambda functions such as:
+
+- `create_tenant`;
+- `list_tenants`;
+- `get_tenant`;
+- `add_member`;
+- `update_member`;
+- `remove_member`.
+
+## Rationale
+
+This keeps handlers:
+
+- small;
+- independently deployable;
+- easier to test;
+- aligned with least-privilege IAM;
+- easy to troubleshoot.
+
+## Alternatives Considered
+
+### One monolithic Lambda
+
+Rejected because it would:
+
+- centralize too much logic;
+- make testing and permissions broader;
+- increase deployment blast radius.
+
+## Consequences
+
+Positive:
+
+- clearer responsibility;
+- smaller handler scope;
+- simpler logs and alarms per function.
+
+Negative:
+
+- more functions to deploy and monitor;
+- repeated configuration in the SAM template.
+
+## Revisit When
+
+- function count becomes difficult to manage;
+- route groups share significant runtime behavior;
+- a framework-based Lambda monolith provides measurable value.
+
+---
+
+# ADR-008: Use a Shared Lambda Layer
+
+## Status
+
+Accepted.
+
+## Context
+
+Multiple Lambda functions need the same authentication, authorization, database, secret, response, serialization, and observability logic.
+
+## Decision
+
+Store reusable application modules in:
+
+```text
+backend/layers/shared/python/shared/
+```
+
+and third-party dependencies directly under:
+
+```text
+backend/layers/shared/python/
+```
+
+## Rationale
+
+The layer reduces duplication and centralizes security-sensitive behavior.
+
+## Alternatives Considered
+
+### Copy helper modules into each function
+
+Rejected because it would create duplication and inconsistent behavior.
+
+### Package everything independently
+
+Rejected because the project would have repeated dependencies and larger artifacts.
+
+## Consequences
+
+Positive:
+
+- centralized logic;
+- easier security fixes;
+- consistent responses and authorization;
+- smaller function folders.
+
+Negative:
+
+- all functions depend on layer compatibility;
+- local Windows testing must avoid importing Linux binaries before local packages;
+- layer versioning must be managed.
+
+## Revisit When
+
+- deployment coupling becomes a problem;
+- functions require conflicting dependency versions;
+- packaging tools provide a better approach.
+
+---
+
+# ADR-009: Centralize Authorization
+
+## Status
+
+Accepted.
+
+## Context
+
+Every tenant-scoped handler must enforce consistent membership and role rules.
+
+## Decision
+
+Use reusable helpers:
 
 ```python
 require_membership()
@@ -165,389 +577,911 @@ require_owner()
 
 ## Rationale
 
-Centralizing authorization:
-
-- reduces duplicated code;
-- improves maintainability;
-- provides consistent tenant security;
-- simplifies future permission changes.
-
----
-
-# ADR-006 — User Provisioning
-
-## Status
-
-Accepted
-
-## Decision
-
-Provision CloudDesk users using a Cognito Post Confirmation trigger.
-
-## Context
-
-Cognito identities should not become the application's data store.
-
-CloudDesk requires additional application information beyond authentication.
+Authorization logic is security-critical and should not be duplicated across handlers.
 
 ## Alternatives Considered
 
-- Create users during every API request
-- Query Cognito directly for user information
+### Inline checks in every handler
 
-## Rationale
+Rejected because duplicated checks can drift and create vulnerabilities.
 
-Creating the application user immediately after signup:
+### IAM-only authorization
 
-- avoids repeated synchronization;
-- keeps authentication separate from application data;
-- reduces request latency;
-- simplifies API handlers.
+Rejected because tenant roles are application data, not AWS identities.
+
+## Consequences
+
+Positive:
+
+- consistent access rules;
+- easier tests;
+- easier reviews;
+- simpler handlers.
+
+Negative:
+
+- authorization helpers become a critical shared dependency.
+
+## Revisit When
+
+- policy complexity justifies a policy engine;
+- fine-grained resource permissions expand significantly.
 
 ---
 
-# ADR-007 — Relational Database
+# ADR-010: Use Application-Level Tenant Isolation
 
 ## Status
 
-Accepted
-
-## Decision
-
-Amazon RDS for PostgreSQL stores application data.
+Accepted.
 
 ## Context
 
-CloudDesk requires:
-
-- transactions;
-- foreign keys;
-- many-to-many relationships;
-- relational joins.
-
-## Alternatives Considered
-
-- DynamoDB
-- Aurora Serverless
-
-## Rationale
-
-PostgreSQL provides strong relational consistency and naturally models tenant membership relationships.
-
-Aurora was unnecessary for the current workload, while DynamoDB would significantly complicate relational queries.
-
----
-
-# ADR-008 — Multi-Tenant Data Model
-
-## Status
-
-Accepted
+CloudDesk uses a shared PostgreSQL schema.
 
 ## Decision
 
-Use a many-to-many relationship between users and tenants.
+Enforce tenant isolation by verifying the current user's active membership before tenant operations.
+
+## Rationale
+
+The current project scale and complexity do not justify a separate policy engine or PostgreSQL row-level security.
+
+## Alternatives Considered
+
+### PostgreSQL Row-Level Security
+
+Deferred because:
+
+- it adds database-policy complexity;
+- the project already enforces roles in the application;
+- it is not required for the current milestone.
+
+## Consequences
+
+Positive:
+
+- clear application behavior;
+- easier handler-level testing.
+
+Negative:
+
+- every query must remain tenant-aware;
+- application mistakes remain a risk.
+
+## Revisit When
+
+- defense-in-depth requirements increase;
+- the query layer expands;
+- a production security review recommends database-enforced isolation.
+
+---
+
+# ADR-011: Use Soft Deletion for Membership Removal
+
+## Status
+
+Accepted.
+
+## Context
+
+CloudDesk should preserve membership history.
+
+## Decision
+
+Set membership status to `inactive` rather than deleting the row.
+
+## Rationale
+
+Soft deletion supports:
+
+- audit history;
+- recovery;
+- accidental-deletion protection;
+- future reactivation.
+
+## Alternatives Considered
+
+### Hard deletion
+
+Rejected because it permanently removes useful membership history.
+
+## Consequences
+
+Positive:
+
+- historical data preserved;
+- easier future auditing.
+
+Negative:
+
+- queries must filter by active status;
+- reactivation behavior must eventually be defined.
+
+## Revisit When
+
+- legal retention rules require physical deletion;
+- data lifecycle policies are introduced.
+
+---
+
+# ADR-012: Protect Tenant Ownership
+
+## Status
+
+Accepted.
+
+## Context
+
+Removing or demoting the only tenant owner would leave the tenant without administrative control.
+
+## Decision
+
+The standard membership API cannot:
+
+- assign `owner`;
+- demote the current owner;
+- remove the current owner;
+- allow owner self-removal.
+
+## Rationale
+
+Ownership changes require a dedicated, transactional workflow.
+
+## Alternatives Considered
+
+### Allow owner changes through the role endpoint
+
+Rejected because it could create ownerless tenants or ambiguous authority.
+
+## Consequences
+
+Positive:
+
+- protects tenant continuity;
+- prevents accidental lockout.
+
+Negative:
+
+- ownership transfer is not currently supported.
+
+## Revisit When
+
+- a dedicated ownership-transfer workflow is implemented.
+
+---
+
+# ADR-013: Store Database Credentials in Secrets Manager
+
+## Status
+
+Accepted.
+
+## Context
+
+Lambda requires PostgreSQL credentials.
+
+## Decision
+
+Store credentials in AWS Secrets Manager and pass only the secret ARN to the application.
+
+## Rationale
+
+This avoids hardcoded credentials and supports future rotation.
+
+## Alternatives Considered
+
+### Environment variables containing passwords
+
+Rejected because credentials would be directly visible in configuration and deployment history.
+
+### Parameter Store
+
+Not selected because Secrets Manager is purpose-built for secrets and future rotation.
+
+## Consequences
+
+Positive:
+
+- no database password in source control;
+- centralized secret management;
+- future rotation support.
+
+Negative:
+
+- recurring cost;
+- runtime dependency;
+- caching and rotation behavior must be considered.
+
+## Revisit When
+
+- rotation is enabled;
+- secret architecture changes;
+- organization-wide secret-management standards are introduced.
+
+---
+
+# ADR-014: Use a Secrets Manager Interface VPC Endpoint
+
+## Status
+
+Accepted.
+
+## Context
+
+VPC-connected Lambda functions need to retrieve database credentials without public internet access.
+
+## Decision
+
+Use a Secrets Manager interface endpoint.
+
+## Rationale
+
+This provides private service access without adding a NAT Gateway solely for secret retrieval.
+
+## Alternatives Considered
+
+### NAT Gateway
+
+Rejected because it would add a larger recurring cost and broader outbound connectivity.
+
+### Public internet path
+
+Rejected because the Lambda functions are designed for private dependency access.
+
+## Consequences
+
+Positive:
+
+- private secret retrieval;
+- avoids NAT Gateway;
+- explicit endpoint security group.
+
+Negative:
+
+- interface endpoint has recurring cost;
+- additional network resources.
+
+## Revisit When
+
+- multiple private workloads require broad outbound internet access;
+- a centralized egress design is introduced.
+
+---
+
+# ADR-015: Use AWS SAM
+
+## Status
+
+Accepted.
+
+## Context
+
+CloudDesk is primarily a serverless AWS application.
+
+## Decision
+
+Use AWS SAM and CloudFormation for Infrastructure as Code.
+
+## Rationale
+
+SAM provides direct support for:
+
+- Lambda;
+- API Gateway;
+- events;
+- layers;
+- IAM policies;
+- CloudFormation outputs.
+
+## Alternatives Considered
+
+### Terraform
+
+Not added because maintaining the same application in two IaC tools would create unnecessary complexity.
+
+### Manual console deployment
+
+Rejected because it is not repeatable and does not support reliable CI/CD.
+
+## Consequences
+
+Positive:
+
+- serverless-native templates;
+- CloudFormation rollback;
+- repeatable deployment;
+- GitHub Actions integration.
+
+Negative:
+
+- CloudFormation errors can be verbose;
+- some existing resource relationships require careful parameterization.
+
+## Revisit When
+
+- the portfolio needs a Terraform-specific project;
+- CloudDesk expands beyond SAM's comfortable scope;
+- organization standards require Terraform.
+
+---
+
+# ADR-016: Use GitHub Actions for CI/CD
+
+## Status
+
+Accepted.
+
+## Context
+
+CloudDesk requires automated quality checks and deployment.
+
+## Decision
+
+Use:
 
 ```text
-users
-    │
-tenant_users
-    │
-tenants
+.github/workflows/ci.yml
+.github/workflows/deploy.yml
 ```
-
-## Context
-
-Users may belong to multiple tenants.
-
-Tenants may contain multiple users.
-
-Each membership requires its own role and status.
 
 ## Rationale
 
-The junction table supports:
+GitHub Actions integrates directly with the repository and supports OIDC authentication to AWS.
 
-- tenant-specific roles;
-- membership history;
-- soft deletion;
-- future auditing.
+## Consequences
+
+Positive:
+
+- automated validation;
+- deployment only after successful CI;
+- visible workflow history;
+- no separate CI platform.
+
+Negative:
+
+- workflow permissions and triggers must be maintained;
+- deployment depends on GitHub availability.
+
+## Revisit When
+
+- organization-wide CI moves to another platform;
+- deployment requirements require a specialized release system.
 
 ---
 
-# ADR-009 — Soft Delete Memberships
+# ADR-017: Use GitHub OIDC Instead of AWS Access Keys
 
 ## Status
 
-Accepted
-
-## Decision
-
-Removing a member marks the membership as inactive instead of deleting it.
+Accepted.
 
 ## Context
 
-Membership history may become valuable for auditing, troubleshooting, or future restoration.
+CI/CD requires AWS credentials.
+
+## Decision
+
+Use GitHub OIDC and AWS STS `AssumeRoleWithWebIdentity`.
+
+## Rationale
+
+OIDC provides short-lived credentials and eliminates long-lived AWS keys in GitHub.
 
 ## Alternatives Considered
 
-- Permanent deletion
+### GitHub repository secrets containing AWS keys
 
-## Rationale
+Rejected because static credentials create a larger security risk and require rotation.
 
-Soft deletion:
+## Consequences
 
-- preserves history;
-- reduces accidental data loss;
-- supports future reactivation;
-- simplifies auditing.
+Positive:
+
+- no long-lived AWS keys;
+- trust restricted by repository and branch;
+- temporary credentials.
+
+Negative:
+
+- trust policies are sensitive to exact OIDC subject claims;
+- immutable GitHub subject configuration required troubleshooting.
+
+## Revisit When
+
+- GitHub identity configuration changes;
+- separate deployment roles are created for staging and production.
 
 ---
 
-# ADR-010 — Shared Lambda Layer
+# ADR-018: Separate CI and Deployment Workflows
 
 ## Status
 
-Accepted
-
-## Decision
-
-Application helper modules are stored in a shared Lambda Layer.
+Accepted.
 
 ## Context
 
-Authentication, authorization, database access, configuration, serialization, and response handling are used across many Lambda functions.
+CloudDesk must not deploy code that has not passed validation.
+
+## Decision
+
+Use one workflow for CI and another triggered after successful CI on `main`.
 
 ## Rationale
 
-The shared layer:
+This creates a clear gate between validation and deployment.
 
-- avoids duplicated code;
-- keeps handlers small;
-- centralizes reusable logic;
-- simplifies maintenance.
+The deployment workflow checks out the exact commit SHA validated by CI.
 
-Application modules remain under:
+## Consequences
+
+Positive:
+
+- deployment is blocked by test or build failures;
+- exact validated commit is deployed;
+- responsibilities remain clear.
+
+Negative:
+
+- workflow chaining adds configuration complexity.
+
+## Revisit When
+
+- release environments require approvals;
+- reusable workflows simplify the design.
+
+---
+
+# ADR-019: Use Black, isort, Ruff, pytest, and pytest-cov
+
+## Status
+
+Accepted.
+
+## Context
+
+The project needs automated code quality and testing.
+
+## Decision
+
+Use:
+
+- Black for formatting;
+- isort for import ordering;
+- Ruff for linting;
+- pytest for tests;
+- pytest-cov for coverage.
+
+## Rationale
+
+These tools provide fast, widely understood Python quality gates.
+
+## Consequences
+
+Positive:
+
+- consistent code;
+- fewer review debates;
+- fast feedback;
+- measurable coverage.
+
+Negative:
+
+- tooling configuration must exclude vendored layer dependencies.
+
+---
+
+# ADR-020: Use Native CloudWatch Observability
+
+## Status
+
+Accepted.
+
+## Context
+
+CloudDesk needs logs, metrics, alarms, notifications, and dashboards.
+
+## Decision
+
+Use CloudWatch and SNS.
+
+## Rationale
+
+CloudDesk is AWS-native, and CloudWatch already provides the required service metrics.
+
+## Alternatives Considered
+
+### Prometheus and Grafana
+
+Rejected because they would add infrastructure and maintenance without solving a current monitoring gap.
+
+### Third-party observability platform
+
+Rejected because the project does not require its additional features or cost.
+
+## Consequences
+
+Positive:
+
+- native integration;
+- no additional platform;
+- simple deployment.
+
+Negative:
+
+- dashboard flexibility is more limited than specialized platforms;
+- custom application metrics are not yet implemented.
+
+## Revisit When
+
+- multi-cloud monitoring is required;
+- advanced visualization becomes necessary;
+- observability requirements exceed CloudWatch.
+
+---
+
+# ADR-021: Apply 30-Day Log Retention After Deployment
+
+## Status
+
+Accepted.
+
+## Context
+
+Lambda automatically created some log groups before CloudFormation attempted to manage them.
+
+This caused `AlreadyExists` failures.
+
+## Decision
+
+Deploy the stack first, then apply 30-day retention to existing CloudDesk Lambda log groups in the deployment workflow.
+
+## Rationale
+
+This avoids conflicts with automatically created log groups.
+
+## Alternatives Considered
+
+### Explicit CloudFormation log-group resources
+
+Rejected for the current stack because existing groups caused deployment failure.
+
+## Consequences
+
+Positive:
+
+- deployment succeeds;
+- logs do not remain indefinitely.
+
+Negative:
+
+- never-invoked functions may not yet have log groups;
+- retention may require later reconciliation.
+
+## Revisit When
+
+- all function log groups can be managed predictably;
+- a dedicated retention-reconciliation job is introduced.
+
+---
+
+# ADR-022: Use Structured Logging for Critical Mutations
+
+## Status
+
+Accepted.
+
+## Context
+
+Tenant and membership mutations are high-value operational events.
+
+## Decision
+
+Instrument:
+
+- tenant creation;
+- member addition;
+- role update;
+- member removal.
+
+## Rationale
+
+These operations are important for troubleshooting and future auditing.
+
+## Consequences
+
+Positive:
+
+- better incident investigation;
+- request and tenant context;
+- consistent operation outcomes.
+
+Negative:
+
+- not every handler is instrumented yet;
+- logs are not a complete audit store.
+
+## Revisit When
+
+- all handlers require instrumentation;
+- a dedicated audit-event system is introduced.
+
+---
+
+# ADR-023: Do Not Add RDS Proxy Yet
+
+## Status
+
+Accepted.
+
+## Context
+
+Lambda concurrency can create database connection pressure.
+
+## Decision
+
+Use direct Lambda-to-RDS connections with connection reuse for the current workload.
+
+## Rationale
+
+There is no demonstrated connection-exhaustion problem yet.
+
+## Alternatives Considered
+
+### RDS Proxy
+
+Deferred because it adds cost and infrastructure complexity.
+
+## Consequences
+
+Positive:
+
+- simpler architecture;
+- lower cost.
+
+Negative:
+
+- direct connections remain a scaling risk.
+
+## Revisit When
+
+- concurrency grows;
+- connection exhaustion appears;
+- failover connection handling needs improvement.
+
+---
+
+# ADR-024: Do Not Add Containers or Kubernetes
+
+## Status
+
+Accepted.
+
+## Context
+
+The project goal is to solve the current backend requirements without overengineering.
+
+## Decision
+
+Do not add Docker, ECS, EKS, or Kubernetes.
+
+## Rationale
+
+The workload is well suited to Lambda.
+
+Adding containers would not improve the current architecture.
+
+## Revisit When
+
+- long-running processes appear;
+- workload packaging requires containers;
+- runtime limits become a problem.
+
+---
+
+# ADR-025: Keep the Database-Test Endpoint for Development Verification
+
+## Status
+
+Accepted with restriction.
+
+## Context
+
+The team needs a way to verify Lambda, Secrets Manager, VPC networking, and PostgreSQL together.
+
+## Decision
+
+Keep `/database-test` during development.
+
+## Rationale
+
+It provides a direct deployment-verification signal.
+
+## Consequences
+
+Positive:
+
+- fast networking and database diagnostics.
+
+Negative:
+
+- it may expose unnecessary database metadata;
+- it is not suitable as a public production endpoint.
+
+## Revisit When
+
+- production hardening begins;
+- a safer internal health-check design is implemented.
+
+---
+
+# ADR-026: Use Security Response Headers
+
+## Status
+
+Accepted.
+
+## Context
+
+Authenticated API responses should reduce browser-related exposure and caching.
+
+## Decision
+
+Add:
 
 ```text
-backend/layers/shared/python/shared/
+X-Content-Type-Options: nosniff
+X-Frame-Options: DENY
+Referrer-Policy: no-referrer
+Cache-Control: no-store
 ```
 
-Third-party libraries remain under:
+## Rationale
 
-```text
-backend/layers/shared/python/
-```
+These headers are low-cost defensive controls.
+
+## Consequences
+
+Positive:
+
+- prevents content sniffing;
+- prevents framing;
+- reduces referrer leakage;
+- prevents response caching.
+
+Negative:
+
+- request-ID propagation is still incomplete.
 
 ---
 
-# ADR-011 — Database Credentials
+# ADR-027: Do Not Add WAF or Rate Limiting Yet
 
 ## Status
 
-Accepted
-
-## Decision
-
-Database credentials are stored in AWS Secrets Manager.
+Deferred.
 
 ## Context
 
-Credentials must never be committed to source control.
-
-## Alternatives Considered
-
-- Environment variables
-- Hardcoded credentials
-
-## Rationale
-
-Secrets Manager provides:
-
-- secure storage;
-- IAM-controlled access;
-- credential rotation support;
-- centralized secret management.
-
----
-
-# ADR-012 — Private Database Connectivity
-
-## Status
-
-Accepted
+CloudDesk is a development portfolio environment.
 
 ## Decision
 
-Database-connected Lambda functions execute inside a VPC.
+Do not add WAF or route-specific throttling during the current milestone.
+
+## Rationale
+
+The project does not yet have public production traffic or a measured abuse problem.
+
+## Consequences
+
+Positive:
+
+- avoids unnecessary cost and configuration.
+
+Negative:
+
+- public production hardening remains incomplete.
+
+## Revisit When
+
+- public traffic is introduced;
+- threat modeling identifies abuse risks;
+- production launch begins.
+
+---
+
+# ADR-028: Use Manual Initial Database Migration
+
+## Status
+
+Accepted temporarily.
 
 ## Context
 
-Amazon RDS is not publicly accessible.
-
-## Rationale
-
-Private networking:
-
-- reduces attack surface;
-- keeps database traffic off the public internet;
-- follows AWS security best practices.
-
----
-
-# ADR-013 — Secrets Manager VPC Endpoint
-
-## Status
-
-Accepted
+The initial schema must be applied to PostgreSQL.
 
 ## Decision
 
-Use an Interface VPC Endpoint instead of a NAT Gateway for secret retrieval.
+Run the initial SQL migration manually from an environment with database access.
+
+## Rationale
+
+The project has one initial migration and does not yet require a migration orchestration system.
+
+## Consequences
+
+Positive:
+
+- simple;
+- transparent;
+- no additional tool.
+
+Negative:
+
+- not ideal for multiple environments;
+- no automated rollback;
+- deployment and schema changes are separate.
+
+## Revisit When
+
+- additional migrations are added;
+- staging and production environments exist;
+- deployment approvals and rollback procedures are defined.
+
+---
+
+# ADR-029: Use a Development-First Environment
+
+## Status
+
+Accepted.
 
 ## Context
 
-Lambda functions running inside private subnets require access to Secrets Manager.
-
-## Alternatives Considered
-
-- NAT Gateway
-
-## Rationale
-
-The interface endpoint provides private connectivity without introducing a NAT Gateway solely for secret retrieval.
-
-This aligns with the project's cost optimization goals.
-
----
-
-# ADR-014 — Role-Based Access Control
-
-## Status
-
-Accepted
+CloudDesk is a portfolio project under active development.
 
 ## Decision
 
-CloudDesk implements tenant-level RBAC.
-
-Supported roles:
-
-- owner
-- admin
-- member
+Deploy the current implementation as `dev` in `us-east-1`.
 
 ## Rationale
 
-RBAC provides a simple and scalable authorization model while allowing future expansion of tenant permissions.
+This avoids the cost and complexity of duplicate environments before the application is stable.
+
+## Consequences
+
+Positive:
+
+- lower cost;
+- simpler learning environment.
+
+Negative:
+
+- does not demonstrate full environment separation;
+- production release controls are not present.
+
+## Revisit When
+
+- staging tests are required;
+- production launch is considered;
+- environment-specific IAM and data separation are implemented.
 
 ---
 
-# ADR-015 — Owner Protection
+## Decision Summary
 
-## Status
+CloudDesk deliberately prioritizes:
 
-Accepted
+- secure defaults;
+- managed AWS services;
+- clear tenant isolation;
+- automation;
+- maintainability;
+- operational visibility;
+- cost-conscious simplicity.
 
-## Decision
+The project intentionally avoids technologies that do not solve a current problem.
 
-The API protects the tenant owner.
-
-The owner:
-
-- cannot be removed;
-- cannot be demoted;
-- cannot be reassigned through standard membership endpoints.
-
-## Rationale
-
-Every tenant must always retain a valid owner.
-
-This prevents orphaned tenants and protects administrative integrity.
-
----
-
-# ADR-016 — Response Standardization
-
-## Status
-
-Accepted
-
-## Decision
-
-All API responses use shared response helpers.
-
-## Rationale
-
-Consistent responses:
-
-- improve API usability;
-- simplify frontend development;
-- reduce duplicated formatting logic.
-
----
-
-# ADR-017 — Serialization Layer
-
-## Status
-
-Accepted
-
-## Decision
-
-UUIDs, timestamps, and other database values are serialized through a shared helper module.
-
-## Rationale
-
-Centralized serialization prevents repeated conversion logic inside Lambda handlers and ensures consistent JSON responses.
-
----
-
-# ADR-018 — Current Operational Scope
-
-## Status
-
-Accepted
-
-## Decision
-
-Do not introduce infrastructure until it solves a demonstrated engineering requirement.
-
-Examples intentionally excluded at the current stage include:
-
-- Amazon RDS Proxy
-- Amazon ECS
-- Amazon EKS
-- Kubernetes
-- Terraform alongside SAM
-
-## Rationale
-
-CloudDesk is intended to demonstrate sound engineering judgment rather than the number of AWS services used.
-
-Additional services will be introduced only when they provide measurable value to the architecture.
-
----
-
-# Decision Summary
-
-| ADR | Decision |
-|------|----------|
-| ADR-001 | Serverless architecture |
-| ADR-002 | AWS SAM |
-| ADR-003 | API Gateway HTTP API |
-| ADR-004 | Amazon Cognito |
-| ADR-005 | Separate authentication and authorization |
-| ADR-006 | Post Confirmation user provisioning |
-| ADR-007 | PostgreSQL |
-| ADR-008 | Many-to-many tenant model |
-| ADR-009 | Soft delete memberships |
-| ADR-010 | Shared Lambda Layer |
-| ADR-011 | AWS Secrets Manager |
-| ADR-012 | Private Lambda-to-RDS networking |
-| ADR-013 | Secrets Manager Interface VPC Endpoint |
-| ADR-014 | Tenant RBAC |
-| ADR-015 | Owner protection |
-| ADR-016 | Standardized API responses |
-| ADR-017 | Shared serialization |
-| ADR-018 | Introduce infrastructure only when justified |
+The architecture should evolve only when new requirements, measurements, or risks justify the change.

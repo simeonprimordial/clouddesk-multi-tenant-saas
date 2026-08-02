@@ -1,44 +1,79 @@
 # CloudDesk API Documentation
 
-## 1. Overview
+> HTTP API reference for the CloudDesk multi-tenant SaaS backend.
 
-CloudDesk exposes a serverless HTTP API for user, tenant, and tenant-membership management.
+---
+
+## Document Status
+
+| Field | Value |
+|---|---|
+| Project | CloudDesk Multi-Tenant SaaS Backend |
+| Environment documented | `dev` |
+| AWS Region | `us-east-1` |
+| API type | Amazon API Gateway HTTP API |
+| Authentication | Amazon Cognito JWT |
+| Compute | AWS Lambda |
+| Database | Amazon RDS for PostgreSQL |
+| API version | Unversioned |
+| Documentation status | Current through tenant membership management |
+
+This document describes the API currently implemented by CloudDesk. It covers route behavior, authentication, authorization, request and response structures, business rules, error handling, security headers, and test workflows.
+
+---
+
+## 1. API Overview
+
+CloudDesk exposes a serverless HTTP API for:
+
+- platform health verification;
+- database-connectivity verification;
+- authenticated-user lookup;
+- tenant creation and retrieval;
+- tenant membership listing;
+- member addition;
+- member-role updates;
+- membership soft deletion.
 
 The API is implemented with:
 
 - Amazon API Gateway HTTP API;
 - AWS Lambda;
-- Amazon Cognito JWT authorization;
-- Amazon RDS for PostgreSQL.
+- Amazon Cognito;
+- Amazon RDS for PostgreSQL;
+- AWS Secrets Manager;
+- a shared Lambda application layer.
 
-Protected routes require a valid Cognito token.
+Protected routes require a valid Cognito access token.
 
 ---
 
 ## 2. Base URL
 
-The deployed API follows this format:
-
-```text
-https://<api-id>.execute-api.us-east-1.amazonaws.com/<environment>
-```
-
-For the development environment:
+The development API follows this format:
 
 ```text
 https://<api-id>.execute-api.us-east-1.amazonaws.com/dev
 ```
 
-Replace `<api-id>` with the API Gateway identifier returned by the SAM deployment.
+Set it once for terminal testing:
+
+```bash
+export BASE_URL="https://<api-id>.execute-api.us-east-1.amazonaws.com/dev"
+```
+
+Replace `<api-id>` with the API Gateway identifier returned by the deployed CloudFormation stack.
+
+When the API is configured with the `$default` stage, omit `/dev`. The deployed stack output is the source of truth for the active URL.
 
 ---
 
 ## 3. Authentication
 
-Protected routes require an authorization header:
+Protected routes require:
 
 ```http
-Authorization: Bearer <token>
+Authorization: Bearer <access-token>
 ```
 
 Example:
@@ -46,14 +81,51 @@ Example:
 ```bash
 curl \
   -H "Authorization: Bearer $TOKEN" \
-  "https://<api-id>.execute-api.us-east-1.amazonaws.com/dev/me"
+  "$BASE_URL/me"
 ```
 
-API Gateway validates the token before invoking the protected Lambda function.
+### Authentication flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Client
+    participant Cognito as Amazon Cognito
+    participant API as API Gateway
+    participant Lambda
+    participant DB as PostgreSQL
+
+    Client->>Cognito: Authenticate
+    Cognito-->>Client: Access token
+    Client->>API: Request + Bearer token
+    API->>API: Validate JWT
+    API->>Lambda: Invoke with trusted claims
+    Lambda->>DB: Resolve CloudDesk user by Cognito subject
+    DB-->>Lambda: Active application user
+    Lambda-->>Client: API response
+```
+
+API Gateway validates the token before invoking a protected Lambda function.
+
+Lambda does not repeat JWT signature verification. It reads the validated claims from the API Gateway event and maps the Cognito subject to the CloudDesk application user.
+
+### Authentication failures
+
+Authentication may fail when:
+
+- the authorization header is missing;
+- the token is malformed;
+- the token has expired;
+- the issuer is invalid;
+- the audience is invalid;
+- the CloudDesk application user does not exist;
+- the CloudDesk user is inactive.
+
+API Gateway may return its own `401` response before Lambda runs.
 
 ---
 
-## 4. Content Type
+## 4. Request Content Type
 
 Requests containing JSON must include:
 
@@ -67,15 +139,17 @@ Example:
 curl -X POST \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"name":"NovaTech","slug":"novatech"}' \
-  "https://<api-id>.execute-api.us-east-1.amazonaws.com/dev/tenants"
+  -d '{"name":"NovaTech"}' \
+  "$BASE_URL/tenants"
 ```
+
+Malformed JSON returns a client error.
 
 ---
 
-## 5. Response Structure
+## 5. Response Format
 
-CloudDesk uses a consistent JSON response structure.
+CloudDesk Lambda handlers use a shared response helper.
 
 ### Successful response
 
@@ -96,30 +170,92 @@ CloudDesk uses a consistent JSON response structure.
 }
 ```
 
-Some successful responses may return a list or object inside `data`.
+### Response fields
+
+| Field | Type | Description |
+|---|---|---|
+| `success` | boolean | Whether the application operation succeeded |
+| `message` | string | Human-readable result |
+| `data` | object, array, or null | Returned application data when applicable |
+
+API Gateway-generated authentication errors may not use the CloudDesk response envelope.
 
 ---
 
-## 6. Common HTTP Status Codes
+## 6. Response Security Headers
 
-| Status code | Meaning |
+Lambda-generated responses include:
+
+```http
+Content-Type: application/json
+X-Content-Type-Options: nosniff
+X-Frame-Options: DENY
+Referrer-Policy: no-referrer
+Cache-Control: no-store
+```
+
+The response helper also supports:
+
+```http
+X-Request-Id: <request-id>
+```
+
+Request-ID propagation is not yet enabled consistently across every handler.
+
+---
+
+## 7. Common HTTP Status Codes
+
+| Status | Meaning |
 |---|---|
-| `200` | Request completed successfully |
-| `201` | Resource created successfully |
-| `400` | Invalid input or business-rule violation |
-| `401` | Authentication failed |
-| `403` | Authenticated user lacks permission |
-| `404` | Requested resource was not found |
-| `409` | Resource conflict, such as duplicate membership |
-| `500` | Unexpected server error |
+| `200 OK` | Request completed successfully |
+| `201 Created` | Resource created successfully |
+| `400 Bad Request` | Invalid input or protected business-rule violation |
+| `401 Unauthorized` | Authentication failed |
+| `403 Forbidden` | Authenticated user lacks the required tenant permission |
+| `404 Not Found` | Requested user, tenant, or membership was not found |
+| `409 Conflict` | Resource conflict or duplicate state |
+| `500 Internal Server Error` | Unexpected application or dependency failure |
+
+---
+
+## 8. Authorization Model
+
+CloudDesk supports these tenant roles:
+
+| Role | Description |
+|---|---|
+| `owner` | Highest tenant authority |
+| `admin` | May add users and access tenant resources |
+| `member` | Standard tenant access |
+
+Shared authorization helpers enforce:
+
+```python
+require_membership()
+require_admin()
+require_owner()
+```
+
+### Permission matrix
+
+| Endpoint | Member | Admin | Owner |
+|---|:---:|:---:|:---:|
+| `GET /tenants/{tenantId}` | Yes | Yes | Yes |
+| `GET /tenants/{tenantId}/members` | Yes | Yes | Yes |
+| `POST /tenants/{tenantId}/members` | No | Yes | Yes |
+| `PUT /tenants/{tenantId}/members/{userId}` | No | No | Yes |
+| `DELETE /tenants/{tenantId}/members/{userId}` | No | No | Yes |
+
+An allowed role is not enough by itself. The membership must also be active.
 
 ---
 
 # Platform Endpoints
 
-## 7. Health Check
+## 9. Health Check
 
-Checks whether API Gateway and the Lambda runtime are available.
+Confirms that API Gateway and the Lambda runtime are available.
 
 ### Request
 
@@ -134,11 +270,10 @@ Not required.
 ### Example
 
 ```bash
-curl \
-  "https://<api-id>.execute-api.us-east-1.amazonaws.com/dev/health"
+curl "$BASE_URL/health"
 ```
 
-### Example successful response
+### Example response
 
 ```json
 {
@@ -151,18 +286,27 @@ curl \
 }
 ```
 
-### Possible status codes
+### Status codes
 
-| Status code | Meaning |
+| Status | Meaning |
 |---|---|
-| `200` | API is available |
+| `200` | API and Lambda are available |
 | `500` | Lambda execution failed |
+
+### Operational meaning
+
+This endpoint confirms the API path and Lambda runtime. It does not prove that PostgreSQL or Secrets Manager is available.
 
 ---
 
-## 8. Database Connectivity Test
+## 10. Database Connectivity Test
 
-Verifies that the Lambda function can retrieve the database secret and connect to PostgreSQL.
+Verifies that Lambda can:
+
+1. retrieve the database secret;
+2. reach PostgreSQL;
+3. authenticate;
+4. execute a basic query.
 
 ### Request
 
@@ -172,18 +316,15 @@ GET /database-test
 
 ### Authentication
 
-Depends on the current SAM route configuration.
-
-This endpoint is intended for deployment verification and should not remain publicly exposed in a production environment.
+Depends on the deployed route configuration.
 
 ### Example
 
 ```bash
-curl \
-  "https://<api-id>.execute-api.us-east-1.amazonaws.com/dev/database-test"
+curl "$BASE_URL/database-test"
 ```
 
-### Example successful response
+### Example response
 
 ```json
 {
@@ -198,20 +339,37 @@ curl \
 }
 ```
 
-### Possible status codes
+### Status codes
 
-| Status code | Meaning |
+| Status | Meaning |
 |---|---|
-| `200` | Database connection succeeded |
-| `500` | Secret retrieval or database connection failed |
+| `200` | Secret retrieval and database connection succeeded |
+| `500` | Secret retrieval, network access, authentication, or query failed |
+
+### Security note
+
+This route is intended for deployment verification.
+
+Before a real production release, it should be:
+
+- removed;
+- disabled;
+- or restricted to trusted administrative access.
+
+It must never return:
+
+- database passwords;
+- full secret values;
+- credential-bearing connection strings;
+- access tokens.
 
 ---
 
 # User Endpoint
 
-## 9. Get Current User
+## 11. Get Current User
 
-Returns the authenticated CloudDesk application user.
+Returns the CloudDesk application user associated with the authenticated Cognito identity.
 
 ### Request
 
@@ -225,17 +383,17 @@ Required.
 
 ### Authorization
 
-Any authenticated CloudDesk user.
+Any active, provisioned CloudDesk user.
 
 ### Example
 
 ```bash
 curl \
   -H "Authorization: Bearer $TOKEN" \
-  "https://<api-id>.execute-api.us-east-1.amazonaws.com/dev/me"
+  "$BASE_URL/me"
 ```
 
-### Example successful response
+### Example response
 
 ```json
 {
@@ -254,23 +412,7 @@ curl \
 }
 ```
 
-### Error responses
-
-#### Missing or invalid token
-
-```json
-{
-  "message": "Unauthorized"
-}
-```
-
-Status:
-
-```text
-401 Unauthorized
-```
-
-#### Application user not found
+### Error: application user not found
 
 ```json
 {
@@ -285,21 +427,21 @@ Status:
 401 Unauthorized
 ```
 
-### Possible status codes
+### Status codes
 
-| Status code | Meaning |
+| Status | Meaning |
 |---|---|
-| `200` | User returned successfully |
-| `401` | Authentication failed or user record was not found |
-| `500` | Unexpected server error |
+| `200` | User returned |
+| `401` | Token invalid, user missing, or user inactive |
+| `500` | Unexpected server or database error |
 
 ---
 
 # Tenant Endpoints
 
-## 10. Create Tenant
+## 12. Create Tenant
 
-Creates a new tenant and assigns the authenticated user as its owner.
+Creates a tenant and assigns the authenticated user as its owner.
 
 ### Request
 
@@ -313,23 +455,37 @@ Required.
 
 ### Authorization
 
-Any authenticated CloudDesk user.
+Any active CloudDesk user.
 
 ### Request body
 
 ```json
 {
-  "name": "NovaTech",
-  "slug": "novatech"
+  "name": "NovaTech"
 }
 ```
 
 ### Fields
 
 | Field | Type | Required | Description |
-|---|---|---:|---|
+|---|---|:---:|---|
 | `name` | string | Yes | Human-readable tenant name |
-| `slug` | string | Yes | Unique tenant identifier used in application logic |
+
+The handler generates the tenant slug from the supplied name.
+
+Example:
+
+```text
+NovaTech Solutions
+```
+
+becomes a URL-safe slug such as:
+
+```text
+novatech-solutions
+```
+
+The database enforces slug uniqueness.
 
 ### Example
 
@@ -337,14 +493,11 @@ Any authenticated CloudDesk user.
 curl -X POST \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{
-        "name": "NovaTech",
-        "slug": "novatech"
-      }' \
-  "https://<api-id>.execute-api.us-east-1.amazonaws.com/dev/tenants"
+  -d '{"name":"NovaTech"}' \
+  "$BASE_URL/tenants"
 ```
 
-### Example successful response
+### Example response
 
 ```json
 {
@@ -361,23 +514,23 @@ curl -X POST \
 }
 ```
 
-### Business behavior
+### Transactional behavior
 
-The operation creates both:
+The operation creates:
 
-1. the tenant record;
-2. the owner's membership record.
+1. the tenant;
+2. the owner's `tenant_users` membership.
 
-Both database operations occur in one transaction.
+Both writes occur in one PostgreSQL transaction.
 
-### Error responses
+If either write fails, both are rolled back.
 
-#### Missing fields
+### Error: missing name
 
 ```json
 {
   "success": false,
-  "message": "Tenant name and slug are required."
+  "message": "Tenant name is required."
 }
 ```
 
@@ -387,7 +540,7 @@ Status:
 400 Bad Request
 ```
 
-#### Slug already exists
+### Error: generated slug already exists
 
 ```json
 {
@@ -402,19 +555,19 @@ Status:
 409 Conflict
 ```
 
-### Possible status codes
+### Status codes
 
-| Status code | Meaning |
+| Status | Meaning |
 |---|---|
-| `201` | Tenant created successfully |
-| `400` | Invalid request body |
+| `201` | Tenant and owner membership created |
+| `400` | Invalid or missing tenant name |
 | `401` | Authentication failed |
-| `409` | Tenant slug already exists |
-| `500` | Unexpected server error |
+| `409` | Generated slug conflicts with an existing tenant |
+| `500` | Unexpected application or database error |
 
 ---
 
-## 11. List Current User's Tenants
+## 13. List Current User's Tenants
 
 Returns tenants where the authenticated user has an active membership.
 
@@ -430,17 +583,17 @@ Required.
 
 ### Authorization
 
-Any authenticated CloudDesk user.
+Any active CloudDesk user.
 
 ### Example
 
 ```bash
 curl \
   -H "Authorization: Bearer $TOKEN" \
-  "https://<api-id>.execute-api.us-east-1.amazonaws.com/dev/tenants"
+  "$BASE_URL/tenants"
 ```
 
-### Example successful response
+### Example response
 
 ```json
 {
@@ -461,7 +614,7 @@ curl \
 }
 ```
 
-### Empty result
+### Empty response
 
 ```json
 {
@@ -471,19 +624,23 @@ curl \
 }
 ```
 
-### Possible status codes
+### Status codes
 
-| Status code | Meaning |
+| Status | Meaning |
 |---|---|
-| `200` | Tenants returned successfully |
+| `200` | Tenant list returned |
 | `401` | Authentication failed |
-| `500` | Unexpected server error |
+| `500` | Unexpected server or database error |
+
+### Current limitation
+
+Pagination is not currently implemented.
 
 ---
 
-## 12. Get Tenant
+## 14. Get Tenant
 
-Returns one tenant after verifying that the authenticated user has an active membership.
+Returns one tenant after verifying active membership.
 
 ### Request
 
@@ -497,29 +654,29 @@ Required.
 
 ### Authorization
 
-Active tenant membership required.
+Active tenant membership.
 
-Permitted roles:
+Allowed roles:
 
-- `owner`
-- `admin`
-- `member`
+- `owner`;
+- `admin`;
+- `member`.
 
 ### Path parameters
 
-| Parameter | Description |
-|---|---|
-| `tenantId` | Tenant UUID |
+| Parameter | Type | Description |
+|---|---|---|
+| `tenantId` | UUID | Tenant identifier |
 
 ### Example
 
 ```bash
 curl \
   -H "Authorization: Bearer $TOKEN" \
-  "https://<api-id>.execute-api.us-east-1.amazonaws.com/dev/tenants/b763fbb4-8fe3-4198-a69b-990a1e35b92c"
+  "$BASE_URL/tenants/b763fbb4-8fe3-4198-a69b-990a1e35b92c"
 ```
 
-### Example successful response
+### Example response
 
 ```json
 {
@@ -536,9 +693,7 @@ curl \
 }
 ```
 
-### Error responses
-
-#### Tenant ID missing
+### Error: tenant ID missing
 
 ```json
 {
@@ -553,7 +708,7 @@ Status:
 400 Bad Request
 ```
 
-#### User is not an active tenant member
+### Error: membership missing or inactive
 
 ```json
 {
@@ -568,7 +723,7 @@ Status:
 403 Forbidden
 ```
 
-#### Tenant not found
+### Error: tenant not found
 
 ```json
 {
@@ -583,22 +738,22 @@ Status:
 404 Not Found
 ```
 
-### Possible status codes
+### Status codes
 
-| Status code | Meaning |
+| Status | Meaning |
 |---|---|
-| `200` | Tenant returned successfully |
-| `400` | Tenant ID missing |
+| `200` | Tenant returned |
+| `400` | Tenant ID missing or invalid |
 | `401` | Authentication failed |
-| `403` | Active tenant membership required |
+| `403` | Active membership required |
 | `404` | Tenant not found |
-| `500` | Unexpected server error |
+| `500` | Unexpected server or database error |
 
 ---
 
 # Tenant Membership Endpoints
 
-## 13. List Tenant Members
+## 15. List Tenant Members
 
 Returns active members of a tenant.
 
@@ -614,29 +769,29 @@ Required.
 
 ### Authorization
 
-Active tenant membership required.
+Active tenant membership.
 
-Permitted roles:
+Allowed roles:
 
-- `owner`
-- `admin`
-- `member`
+- `owner`;
+- `admin`;
+- `member`.
 
 ### Path parameters
 
-| Parameter | Description |
-|---|---|
-| `tenantId` | Tenant UUID |
+| Parameter | Type | Description |
+|---|---|---|
+| `tenantId` | UUID | Tenant identifier |
 
 ### Example
 
 ```bash
 curl \
   -H "Authorization: Bearer $TOKEN" \
-  "https://<api-id>.execute-api.us-east-1.amazonaws.com/dev/tenants/b763fbb4-8fe3-4198-a69b-990a1e35b92c/members"
+  "$BASE_URL/tenants/$TENANT_ID/members"
 ```
 
-### Example successful response
+### Example response
 
 ```json
 {
@@ -669,19 +824,23 @@ curl \
 }
 ```
 
-### Possible status codes
+### Status codes
 
-| Status code | Meaning |
+| Status | Meaning |
 |---|---|
-| `200` | Members returned successfully |
-| `400` | Tenant ID missing |
+| `200` | Active members returned |
+| `400` | Tenant ID missing or invalid |
 | `401` | Authentication failed |
 | `403` | Active tenant membership required |
-| `500` | Unexpected server error |
+| `500` | Unexpected server or database error |
+
+### Current limitation
+
+Pagination is not currently implemented.
 
 ---
 
-## 14. Add Tenant Member
+## 16. Add Tenant Member
 
 Adds an existing CloudDesk user to a tenant.
 
@@ -701,9 +860,9 @@ Tenant `owner` or `admin`.
 
 ### Path parameters
 
-| Parameter | Description |
-|---|---|
-| `tenantId` | Tenant UUID |
+| Parameter | Type | Description |
+|---|---|---|
+| `tenantId` | UUID | Tenant identifier |
 
 ### Request body
 
@@ -717,11 +876,11 @@ Tenant `owner` or `admin`.
 ### Fields
 
 | Field | Type | Required | Allowed values |
-|---|---|---:|---|
+|---|---|:---:|---|
 | `email` | string | Yes | Existing CloudDesk user's email |
 | `role` | string | Yes | `member`, `admin` |
 
-The standard member endpoint does not permit assigning the `owner` role.
+The endpoint does not allow assigning `owner`.
 
 ### Example
 
@@ -729,14 +888,11 @@ The standard member endpoint does not permit assigning the `owner` role.
 curl -X POST \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{
-        "email": "member@example.com",
-        "role": "member"
-      }' \
-  "https://<api-id>.execute-api.us-east-1.amazonaws.com/dev/tenants/b763fbb4-8fe3-4198-a69b-990a1e35b92c/members"
+  -d '{"email":"member@example.com","role":"member"}' \
+  "$BASE_URL/tenants/$TENANT_ID/members"
 ```
 
-### Example successful response
+### Example response
 
 ```json
 {
@@ -753,9 +909,16 @@ curl -X POST \
 }
 ```
 
-### Error responses
+### Business rules
 
-#### Missing email
+- The caller must be an active owner or admin.
+- The target email must belong to an existing CloudDesk user.
+- The role must be `member` or `admin`.
+- `owner` cannot be assigned.
+- An existing membership produces a conflict.
+- Inactive membership reactivation is not currently defined.
+
+### Error: email missing
 
 ```json
 {
@@ -764,13 +927,7 @@ curl -X POST \
 }
 ```
 
-Status:
-
-```text
-400 Bad Request
-```
-
-#### Invalid role
+### Error: invalid role
 
 ```json
 {
@@ -779,13 +936,7 @@ Status:
 }
 ```
 
-Status:
-
-```text
-400 Bad Request
-```
-
-#### Insufficient role
+### Error: insufficient permission
 
 ```json
 {
@@ -794,13 +945,7 @@ Status:
 }
 ```
 
-Status:
-
-```text
-403 Forbidden
-```
-
-#### User not found
+### Error: user not found
 
 ```json
 {
@@ -809,13 +954,7 @@ Status:
 }
 ```
 
-Status:
-
-```text
-404 Not Found
-```
-
-#### Membership already exists
+### Error: membership exists
 
 ```json
 {
@@ -824,29 +963,23 @@ Status:
 }
 ```
 
-Status:
+### Status codes
 
-```text
-409 Conflict
-```
-
-### Possible status codes
-
-| Status code | Meaning |
+| Status | Meaning |
 |---|---|
-| `201` | Member added successfully |
-| `400` | Invalid input |
+| `201` | Membership created |
+| `400` | Invalid request body or role |
 | `401` | Authentication failed |
-| `403` | Owner or admin access required |
+| `403` | Owner or admin required |
 | `404` | CloudDesk user not found |
 | `409` | Membership already exists |
-| `500` | Unexpected server error |
+| `500` | Unexpected server or database error |
 
 ---
 
-## 15. Update Tenant Member Role
+## 17. Update Tenant Member Role
 
-Changes an existing tenant member's role.
+Changes an active member's role.
 
 ### Request
 
@@ -864,10 +997,10 @@ Tenant `owner` only.
 
 ### Path parameters
 
-| Parameter | Description |
-|---|---|
-| `tenantId` | Tenant UUID |
-| `userId` | Target CloudDesk user UUID |
+| Parameter | Type | Description |
+|---|---|---|
+| `tenantId` | UUID | Tenant identifier |
+| `userId` | UUID | Target CloudDesk user |
 
 ### Request body
 
@@ -884,7 +1017,7 @@ member
 admin
 ```
 
-The endpoint does not permit assigning the `owner` role.
+The endpoint does not assign `owner`.
 
 ### Example
 
@@ -892,13 +1025,11 @@ The endpoint does not permit assigning the `owner` role.
 curl -X PUT \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{
-        "role": "admin"
-      }' \
-  "https://<api-id>.execute-api.us-east-1.amazonaws.com/dev/tenants/b763fbb4-8fe3-4198-a69b-990a1e35b92c/members/716f39f8-6ec8-46c1-a8a9-e430a1f67310"
+  -d '{"role":"admin"}' \
+  "$BASE_URL/tenants/$TENANT_ID/members/$USER_ID"
 ```
 
-### Example successful response
+### Example response
 
 ```json
 {
@@ -917,14 +1048,13 @@ curl -X PUT \
 
 ### Business rules
 
-- Only the tenant owner can update roles.
-- The `owner` role cannot be assigned.
-- The tenant owner's role cannot be changed.
+- Only the tenant owner may update roles.
+- `owner` cannot be assigned.
+- The current owner's role cannot be changed.
 - The target membership must exist.
+- The target membership must be eligible for update.
 
-### Error responses
-
-#### Missing path parameters
+### Error: missing path parameters
 
 ```json
 {
@@ -933,13 +1063,7 @@ curl -X PUT \
 }
 ```
 
-Status:
-
-```text
-400 Bad Request
-```
-
-#### Invalid role
+### Error: invalid role
 
 ```json
 {
@@ -948,13 +1072,7 @@ Status:
 }
 ```
 
-Status:
-
-```text
-400 Bad Request
-```
-
-#### Non-owner attempts update
+### Error: owner permission required
 
 ```json
 {
@@ -963,13 +1081,7 @@ Status:
 }
 ```
 
-Status:
-
-```text
-403 Forbidden
-```
-
-#### Target membership not found
+### Error: membership not found
 
 ```json
 {
@@ -978,13 +1090,7 @@ Status:
 }
 ```
 
-Status:
-
-```text
-404 Not Found
-```
-
-#### Attempt to change owner role
+### Error: owner role protected
 
 ```json
 {
@@ -993,28 +1099,22 @@ Status:
 }
 ```
 
-Status:
+### Status codes
 
-```text
-400 Bad Request
-```
-
-### Possible status codes
-
-| Status code | Meaning |
+| Status | Meaning |
 |---|---|
-| `200` | Role updated successfully |
+| `200` | Role updated |
 | `400` | Invalid role or protected-owner operation |
 | `401` | Authentication failed |
-| `403` | Tenant owner access required |
-| `404` | Tenant member not found |
-| `500` | Unexpected server error |
+| `403` | Owner permission required |
+| `404` | Membership not found |
+| `500` | Unexpected server or database error |
 
 ---
 
-## 16. Remove Tenant Member
+## 18. Remove Tenant Member
 
-Removes a member by marking the membership inactive.
+Removes a member by setting the membership status to `inactive`.
 
 ### Request
 
@@ -1032,20 +1132,20 @@ Tenant `owner` only.
 
 ### Path parameters
 
-| Parameter | Description |
-|---|---|
-| `tenantId` | Tenant UUID |
-| `userId` | Target CloudDesk user UUID |
+| Parameter | Type | Description |
+|---|---|---|
+| `tenantId` | UUID | Tenant identifier |
+| `userId` | UUID | Target CloudDesk user |
 
 ### Example
 
 ```bash
 curl -X DELETE \
   -H "Authorization: Bearer $TOKEN" \
-  "https://<api-id>.execute-api.us-east-1.amazonaws.com/dev/tenants/b763fbb4-8fe3-4198-a69b-990a1e35b92c/members/716f39f8-6ec8-46c1-a8a9-e430a1f67310"
+  "$BASE_URL/tenants/$TENANT_ID/members/$USER_ID"
 ```
 
-### Example successful response
+### Example response
 
 ```json
 {
@@ -1064,32 +1164,26 @@ curl -X DELETE \
 
 ### Soft-delete behavior
 
-The membership row is retained.
-
-The database changes:
+The row remains in `tenant_users`.
 
 ```text
 status = active
 ```
 
-to:
+changes to:
 
 ```text
 status = inactive
 ```
 
-This preserves membership history.
-
 ### Business rules
 
 - Only the tenant owner may remove a member.
 - The tenant owner cannot be removed.
-- Self-removal is rejected by the current endpoint.
+- The caller cannot remove themselves through the current endpoint.
 - The target membership must exist.
 
-### Error responses
-
-#### Missing path parameters
+### Error: missing path parameters
 
 ```json
 {
@@ -1098,13 +1192,7 @@ This preserves membership history.
 }
 ```
 
-Status:
-
-```text
-400 Bad Request
-```
-
-#### Non-owner attempts removal
+### Error: owner permission required
 
 ```json
 {
@@ -1113,13 +1201,7 @@ Status:
 }
 ```
 
-Status:
-
-```text
-403 Forbidden
-```
-
-#### Target membership not found
+### Error: membership not found
 
 ```json
 {
@@ -1128,13 +1210,7 @@ Status:
 }
 ```
 
-Status:
-
-```text
-404 Not Found
-```
-
-#### Attempt to remove tenant owner
+### Error: tenant owner protected
 
 ```json
 {
@@ -1143,13 +1219,7 @@ Status:
 }
 ```
 
-Status:
-
-```text
-400 Bad Request
-```
-
-#### Attempt to remove yourself
+### Error: self-removal rejected
 
 ```json
 {
@@ -1158,65 +1228,50 @@ Status:
 }
 ```
 
-Status:
+### Status codes
 
-```text
-400 Bad Request
-```
-
-### Possible status codes
-
-| Status code | Meaning |
+| Status | Meaning |
 |---|---|
-| `200` | Membership deactivated successfully |
-| `400` | Invalid or protected removal operation |
+| `200` | Membership deactivated |
+| `400` | Invalid or protected removal |
 | `401` | Authentication failed |
-| `403` | Tenant owner access required |
-| `404` | Tenant member not found |
-| `500` | Unexpected server error |
-
----
-
-# Authorization Matrix
-
-## 17. Tenant Role Permissions
-
-| Endpoint | Member | Admin | Owner |
-|---|---:|---:|---:|
-| `GET /tenants/{tenantId}` | Yes | Yes | Yes |
-| `GET /tenants/{tenantId}/members` | Yes | Yes | Yes |
-| `POST /tenants/{tenantId}/members` | No | Yes | Yes |
-| `PUT /tenants/{tenantId}/members/{userId}` | No | No | Yes |
-| `DELETE /tenants/{tenantId}/members/{userId}` | No | No | Yes |
-
-The authenticated user must also have an active membership.
+| `403` | Owner permission required |
+| `404` | Membership not found |
+| `500` | Unexpected server or database error |
 
 ---
 
 # Error Handling
 
-## 18. Authentication Errors
+## 19. Authentication Errors
 
-Authentication errors occur when:
+API Gateway can return:
 
-- the authorization header is missing;
-- the token is invalid;
-- the token is expired;
-- the token issuer or audience is invalid;
-- the CloudDesk application user cannot be resolved.
+```json
+{
+  "message": "Unauthorized"
+}
+```
 
-API Gateway may return its own unauthorized response before Lambda is invoked.
+Status:
+
+```text
+401 Unauthorized
+```
+
+Lambda-generated authentication errors use the CloudDesk response envelope.
+
+Clients should not assume that every `401` response has identical JSON fields.
 
 ---
 
-## 19. Authorization Errors
+## 20. Authorization Errors
 
-Authorization errors occur when:
+Authorization failures return:
 
-- the user is not a tenant member;
-- the membership is inactive;
-- the user lacks admin access;
-- the user lacks owner access.
+```text
+403 Forbidden
+```
 
 Example:
 
@@ -1227,23 +1282,20 @@ Example:
 }
 ```
 
-Status:
-
-```text
-403 Forbidden
-```
+Authorization failures should not disclose information about inaccessible tenants.
 
 ---
 
-## 20. Validation Errors
+## 21. Validation Errors
 
-Validation errors occur when:
+Validation failures include:
 
-- required path parameters are missing;
-- required JSON fields are missing;
-- JSON cannot be parsed;
-- a role is not supported;
-- a protected owner operation is attempted.
+- malformed JSON;
+- missing fields;
+- missing path parameters;
+- unsupported roles;
+- protected owner operations;
+- invalid business state.
 
 Example:
 
@@ -1262,14 +1314,12 @@ Status:
 
 ---
 
-## 21. Conflict Errors
+## 22. Conflict Errors
 
-A conflict occurs when a requested operation would duplicate an existing resource.
+Conflicts include:
 
-Examples:
-
-- creating a duplicate tenant slug;
-- adding a user who already has a tenant membership.
+- duplicate generated tenant slug;
+- duplicate tenant membership.
 
 Example:
 
@@ -1288,11 +1338,9 @@ Status:
 
 ---
 
-## 22. Server Errors
+## 23. Server Errors
 
-Unexpected failures return a generic error response.
-
-Example:
+Unexpected failures return a generic response.
 
 ```json
 {
@@ -1307,35 +1355,110 @@ Status:
 500 Internal Server Error
 ```
 
-Internal implementation details and secrets should not be returned to API clients.
+The API must not return:
 
-Detailed failures should be investigated through CloudWatch Logs.
+- stack traces;
+- SQL statements containing sensitive values;
+- database credentials;
+- secret values;
+- tokens;
+- internal network details.
+
+Investigation occurs through CloudWatch Logs.
+
+---
+
+# API Security
+
+## 24. Tenant Isolation
+
+A tenant UUID is not an authorization mechanism.
+
+Every tenant-scoped route must verify:
+
+1. the authenticated application user;
+2. the user's membership for the requested tenant;
+3. membership status;
+4. the required role.
+
+Changing `tenantId` in the URL must never grant access to another tenant.
+
+---
+
+## 25. Token Handling
+
+Tokens must not be:
+
+- committed to Git;
+- stored in screenshots;
+- copied into public documentation;
+- written to CloudWatch logs;
+- shared in public channels.
+
+Use temporary shell variables:
+
+```bash
+export TOKEN="<temporary-access-token>"
+```
+
+Unset after testing:
+
+```bash
+unset TOKEN
+```
+
+---
+
+## 26. Sensitive Logging Rules
+
+Structured logs may include:
+
+- request ID;
+- route;
+- HTTP method;
+- tenant ID;
+- target user ID;
+- current application user ID;
+- operation outcome;
+- status code.
+
+Logs must not include:
+
+- authorization header;
+- access or ID tokens;
+- passwords;
+- secret values;
+- full Cognito claims;
+- raw database connection strings.
+
+---
+
+## 27. Response Caching
+
+CloudDesk responses include:
+
+```http
+Cache-Control: no-store
+```
+
+This is appropriate for authenticated tenant and user data.
 
 ---
 
 # Testing Workflow
 
-## 23. Environment Variables
-
-Set the base URL and token:
+## 28. Environment Variables
 
 ```bash
 export BASE_URL="https://<api-id>.execute-api.us-east-1.amazonaws.com/dev"
-export TOKEN="<cognito-token>"
-```
-
-Set tenant and user identifiers:
-
-```bash
+export TOKEN="<cognito-access-token>"
 export TENANT_ID="<tenant-id>"
 export USER_ID="<user-id>"
 ```
 
 ---
 
-## 24. Suggested Endpoint Test Order
-
-Test the API in this order:
+## 29. Suggested Test Order
 
 ```text
 1. GET /health
@@ -1350,13 +1473,39 @@ Test the API in this order:
 10. DELETE /tenants/{tenantId}/members/{userId}
 ```
 
-This order follows the natural resource lifecycle.
+This follows the natural resource lifecycle.
 
 ---
 
-## 25. Verify the Membership Lifecycle
+## 30. Authorization Test Cases
 
-After adding a member:
+Test with separate users representing:
+
+- tenant owner;
+- tenant admin;
+- tenant member;
+- authenticated non-member.
+
+Expected behavior:
+
+| Test | Expected result |
+|---|---|
+| Member retrieves tenant | `200` |
+| Non-member retrieves tenant | `403` |
+| Admin adds member | `201` |
+| Member adds member | `403` |
+| Admin updates role | `403` |
+| Owner updates role | `200` |
+| Admin removes member | `403` |
+| Owner removes member | `200` |
+| Owner attempts self-removal | `400` |
+| Owner attempts owner demotion | `400` |
+
+---
+
+## 31. Membership Lifecycle Verification
+
+After adding:
 
 ```sql
 SELECT
@@ -1378,144 +1527,209 @@ role = member
 status = active
 ```
 
-After updating the role:
+After role update:
 
 ```text
 role = admin
 status = active
 ```
 
-After removing the member:
+After removal:
 
 ```text
 role = admin
 status = inactive
 ```
 
-The row should remain present because removal uses soft deletion.
+The row remains because removal is a soft delete.
 
 ---
 
-# API Security Notes
+## 32. Automated API-Related Tests
 
-## 26. Token Handling
+The project includes handler tests for critical workflows:
 
-Tokens must not be:
+- tenant creation;
+- member addition;
+- member-role update;
+- member removal.
 
-- committed to Git;
-- stored in screenshots intended for public repositories;
-- written into documentation;
-- shared in public channels.
+Shared unit tests cover:
 
-Use temporary shell variables during testing.
+- authentication;
+- authorization;
+- response formatting;
+- serialization;
+- secrets;
+- database helpers.
 
----
+The complete project suite currently contains:
 
-## 27. Tenant Isolation
+```text
+79 passing tests
+```
 
-A tenant UUID is not an authorization mechanism.
-
-Every tenant-scoped endpoint must verify:
-
-1. the authenticated application user;
-2. the user's tenant membership;
-3. the membership status;
-4. the required role.
-
-A user should not gain access simply by changing the `tenantId` path parameter.
+These tests use mocks and fixtures. They do not replace end-to-end tests against deployed AWS resources.
 
 ---
 
-## 28. Database Test Endpoint
+# Observability
 
-The `/database-test` endpoint is useful during development, but it exposes database metadata.
+## 33. Structured Operation Logs
 
-Before a production release, it should be:
+The following high-value operations emit structured logs:
 
-- removed;
-- disabled;
-- or restricted to trusted administrative access.
+- create tenant;
+- add member;
+- update member role;
+- remove member.
 
-It should never return:
-
-- database passwords;
-- complete secret values;
-- connection strings containing credentials.
+Logs include operation start, success, and failure context without exposing sensitive values.
 
 ---
 
-# Current API Limitations
+## 34. Request Correlation
 
-## 29. Existing User Requirement
+CloudWatch logs include AWS and API Gateway request identifiers where available.
 
-The add-member endpoint currently requires the target user to already exist in CloudDesk.
+The shared response helper supports `X-Request-Id`, but not every handler currently returns it.
 
-It does not yet send invitations to unregistered email addresses.
+Future hardening should propagate the request ID consistently.
 
-A future workflow may:
+---
+
+## 35. Relevant Alarms
+
+API failures may contribute to:
+
+- Lambda error alarm;
+- Lambda throttle alarm;
+- API Gateway 5XX alarm;
+- RDS high CPU alarm.
+
+Alarm actions publish to the CloudDesk SNS alarm topic.
+
+---
+
+# Current Limitations
+
+## 36. Existing User Requirement
+
+The add-member endpoint requires the target user to already exist in CloudDesk.
+
+It does not send an invitation to an unregistered email address.
+
+A future invitation workflow may:
 
 1. create an invitation;
 2. email the recipient;
 3. allow signup;
 4. accept the invitation;
-5. activate tenant membership.
+5. activate membership.
 
 ---
 
-## 30. Ownership Transfer
+## 37. Ownership Transfer
 
-The current API does not support transferring tenant ownership.
+The API does not support ownership transfer.
 
-The owner role cannot be assigned through the standard update-member endpoint.
+The owner role cannot be assigned through the standard membership endpoints.
 
-A future ownership-transfer operation should be transactional and explicitly protected.
-
----
-
-## 31. Reactivating Memberships
-
-The current API soft-deletes memberships by setting them to `inactive`.
-
-The current documentation does not define a separate reactivation endpoint.
-
-Future implementation may support reactivation or may update the add-member workflow to safely reactivate inactive memberships.
+A future ownership-transfer endpoint must update both parties transactionally and preserve at least one owner.
 
 ---
 
-## 32. Pagination
+## 38. Membership Reactivation
 
-The current list endpoints do not yet document pagination.
+Removal changes membership status to `inactive`.
 
-Pagination should be introduced when tenant or membership collections can become large enough to justify it.
+There is no reactivation endpoint.
+
+A future design must decide whether reactivation:
+
+- uses a dedicated route;
+- or is handled safely by the add-member workflow.
 
 ---
 
-## 33. API Versioning
+## 39. Pagination and Filtering
 
-The current routes do not include an explicit version prefix.
+The list endpoints currently return complete result sets.
 
-Current format:
+Not yet implemented:
+
+- pagination;
+- sorting;
+- filtering;
+- search;
+- maximum page size.
+
+These capabilities should be added before tenant and membership collections become large.
+
+---
+
+## 40. API Versioning
+
+Current routes are unversioned:
 
 ```text
 /tenants
 ```
 
-A future production API may use:
+A future public contract may use:
 
 ```text
 /v1/tenants
 ```
 
-Versioning should be introduced before incompatible public API changes.
+Versioning should be introduced before incompatible changes.
+
+---
+
+## 41. Idempotency
+
+Create and membership mutation routes do not currently document an idempotency-key contract.
+
+Retries can therefore result in conflict responses when the first operation succeeded but the client did not receive the response.
+
+A future design may support:
+
+```http
+Idempotency-Key: <unique-client-value>
+```
+
+for selected write operations.
+
+---
+
+## 42. Throttling and Abuse Protection
+
+The current API documentation does not define per-client quotas or route-specific throttling.
+
+Before public production use, define:
+
+- API throttling;
+- account concurrency controls;
+- request-size limits;
+- abuse monitoring;
+- WAF controls when justified.
+
+---
+
+## 43. Database Test Route
+
+`/database-test` is a development verification route, not a business API.
+
+It should not be treated as a permanent production endpoint.
 
 ---
 
 # Endpoint Summary
 
-## 34. Complete Endpoint Table
+## 44. Complete Endpoint Table
 
 | Method | Endpoint | Authentication | Required tenant role |
-|---|---|---:|---|
+|---|---|:---:|---|
 | `GET` | `/health` | No | Not applicable |
 | `GET` | `/database-test` | Configuration-dependent | Not applicable |
 | `GET` | `/me` | Yes | Not applicable |
@@ -1529,16 +1743,21 @@ Versioning should be introduced before incompatible public API changes.
 
 ---
 
-## 35. API Documentation Status
+## 45. API Documentation Maintenance
 
-This document covers the API implemented through the tenant membership management milestone.
+Update this document whenever CloudDesk changes:
 
-Future API documentation should be updated when CloudDesk adds:
-
-- tenant-scoped business resources;
+- routes;
+- request bodies;
+- response bodies;
+- status codes;
+- authorization rules;
+- validation behavior;
+- security headers;
+- pagination;
+- versioning;
 - invitation workflows;
 - ownership transfer;
-- audit events;
-- pagination;
-- monitoring endpoints;
-- additional API versions.
+- tenant-scoped business resources.
+
+The Lambda handlers and automated tests are the implementation source of truth.

@@ -1,10 +1,65 @@
 # CloudDesk Multi-Tenant SaaS Backend
 
-CloudDesk is a production-style multi-tenant SaaS backend built on AWS.
+> A production-inspired multi-tenant SaaS backend on AWS with secure identity, tenant-level RBAC, PostgreSQL persistence, automated testing, GitHub OIDC deployment, and CloudWatch observability.
 
-The project demonstrates how users can authenticate, create organizations, manage tenant memberships, and enforce role-based access control using serverless AWS services and PostgreSQL.
+![AWS](https://img.shields.io/badge/AWS-Serverless-FF9900?logo=amazonaws&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.13-3776AB?logo=python&logoColor=white)
+![AWS SAM](https://img.shields.io/badge/IaC-AWS%20SAM-CB2C30?logo=amazonaws&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL-4169E1?logo=postgresql&logoColor=white)
+![GitHub Actions](https://img.shields.io/badge/CI%2FCD-GitHub%20Actions-2088FF?logo=githubactions&logoColor=white)
+![Tests](https://img.shields.io/badge/Tests-79%20passing-success)
+![License](https://img.shields.io/badge/License-MIT-green)
 
-CloudDesk was designed as part of the AWS 80 Projects portfolio to demonstrate practical Cloud Infrastructure Engineering skills rather than simply reproducing a tutorial.
+---
+
+## Executive Summary
+
+CloudDesk is a serverless backend for a multi-tenant Software-as-a-Service platform. It demonstrates how a shared AWS application can serve multiple organizations while enforcing tenant isolation, secure authentication, and role-based authorization.
+
+A confirmed user is provisioned from Amazon Cognito into the CloudDesk PostgreSQL database. Authenticated users can create tenants, become tenant owners, join multiple tenants, and manage tenant memberships according to an `owner`, `admin`, or `member` role.
+
+The project was built as part of the **AWS 80 Projects portfolio** to demonstrate practical Cloud Infrastructure Engineering skills beyond a basic tutorial:
+
+- Serverless application design
+- Identity and access management
+- Multi-tenant authorization
+- Private AWS networking
+- Secure secret retrieval
+- Infrastructure as Code
+- Automated testing and quality gates
+- GitHub OIDC deployment
+- Logging, alarms, notifications, and dashboards
+- Production-style documentation and troubleshooting
+
+CloudDesk currently represents a well-engineered **development environment**. It applies production-grade practices, but further controls would be required before hosting real customer workloads.
+
+
+---
+
+## Table of Contents
+
+- [Business Scenario](#business-scenario)
+- [Requirements](#requirements)
+- [Key Capabilities](#key-capabilities)
+- [Solution Architecture](#solution-architecture)
+- [Identity and User Provisioning](#identity-and-user-provisioning)
+- [Multi-Tenant Data Model](#multi-tenant-data-model)
+- [Authorization Model](#authorization-model)
+- [API Endpoints](#api-endpoints)
+- [Network Architecture](#network-architecture)
+- [Security Architecture](#security-architecture)
+- [CI/CD Pipeline](#cicd-pipeline)
+- [Testing and Code Quality](#testing-and-code-quality)
+- [Monitoring and Observability](#monitoring-and-observability)
+- [Infrastructure as Code](#infrastructure-as-code)
+- [Repository Structure](#repository-structure)
+- [Deployment](#deployment)
+- [API Usage Examples](#api-usage-examples)
+- [AWS Well-Architected Alignment](#aws-well-architected-alignment)
+- [Engineering Decisions](#engineering-decisions)
+- [Lessons Learned](#lessons-learned)
+- [Future Improvements](#future-improvements)
+- [Documentation](#documentation)
 
 ---
 
@@ -12,285 +67,294 @@ CloudDesk was designed as part of the AWS 80 Projects portfolio to demonstrate p
 
 CloudDesk provides the backend foundation for a collaborative business platform.
 
-A registered user can:
+Multiple companies use the same backend infrastructure, but each company operates as an isolated tenant. A registered user may belong to multiple tenants and hold a different role in each one.
 
-- Create an organization.
-- Become the owner of that organization.
-- Belong to multiple organizations.
-- Add existing CloudDesk users to an organization.
-- Assign `admin` or `member` roles.
-- Update member roles.
-- Remove members without deleting their historical membership records.
+A user can:
 
-Each organization is represented as a tenant. Access to tenant data is controlled through tenant membership and role-based authorization.
+- Create an organization
+- Become the organization owner
+- Belong to multiple organizations
+- Add existing CloudDesk users to an organization
+- Assign `admin` or `member` roles
+- Update member roles
+- Remove members without deleting historical membership records
+
+The architecture must prevent users from reading or modifying data belonging to a tenant where they do not have an active membership.
 
 ---
 
-## Business Requirements
+## Requirements
+
+### Business Requirements
 
 CloudDesk must:
 
-- Securely authenticate users.
-- Automatically create an application user after signup confirmation.
-- Allow one user to belong to multiple tenants.
-- Allow one tenant to contain multiple users.
-- Enforce tenant-level authorization.
-- Support `owner`, `admin`, and `member` roles.
-- Prevent unauthorized access to tenant data.
-- Store database credentials securely.
-- Deploy through repeatable Infrastructure as Code.
-- Remain understandable, maintainable, and cost-conscious.
+- Authenticate users securely
+- Provision confirmed users into the application database
+- Allow one user to belong to multiple tenants
+- Allow one tenant to contain multiple users
+- Enforce tenant-level access control
+- Support `owner`, `admin`, and `member` roles
+- Prevent cross-tenant access
+- Protect database credentials
+- Deploy through repeatable Infrastructure as Code
+- Support automated testing and deployment
+- Provide monitoring, alerting, and operational visibility
+- Remain understandable, maintainable, and cost-conscious
+
+### Functional Requirements
+
+#### Authentication and identity
+
+- Register and authenticate users with Amazon Cognito
+- Validate JWT access tokens before protected Lambda functions run
+- Provision confirmed users into PostgreSQL
+- Retrieve the authenticated CloudDesk user profile
+
+#### Tenant management
+
+- Create a tenant
+- Generate a URL-safe tenant slug
+- Assign the tenant creator as owner in the same transaction
+- List tenants belonging to the authenticated user
+- Retrieve a tenant only when the user has an active membership
+
+#### Membership management
+
+- List active tenant members
+- Add an existing CloudDesk user to a tenant
+- Assign `admin` or `member`
+- Update a member role
+- Remove a membership through soft deletion
+- Protect the tenant owner from removal or demotion
+
+#### Platform operations
+
+- Provide health and database-connectivity verification endpoints
+- Return standardized JSON responses
+- Emit structured operational logs
+- Notify the operator when key CloudWatch alarms enter an alarm state
+
+### Non-Functional Requirements
+
+The solution should provide:
+
+- Secure authentication and authorization
+- Tenant data isolation
+- Stateless and scalable compute
+- Private database connectivity
+- Secure secret retrieval
+- Repeatable deployment
+- Automated quality checks
+- Automated unit and handler tests
+- Operational alarms and dashboards
+- Maintainable shared application code
+- Cost-conscious infrastructure
+- Clear architecture, API, decision, and troubleshooting documentation
 
 ---
 
-## Functional Requirements
+## Key Capabilities
 
-### User authentication
-
-- Users register and authenticate through Amazon Cognito.
-- API Gateway validates JSON Web Tokens before invoking protected Lambda functions.
-- Confirmed Cognito users are automatically provisioned in PostgreSQL.
-- Authenticated users can retrieve their CloudDesk user profile.
-
-### Tenant management
-
-- Create a tenant.
-- Automatically assign the creator as the tenant owner.
-- List tenants belonging to the authenticated user.
-- Retrieve a tenant only when the authenticated user belongs to it.
-
-### Membership management
-
-- List active tenant members.
-- Add an existing CloudDesk user to a tenant.
-- Assign `admin` or `member` roles.
-- Update a member's role.
-- Remove a member through soft deletion.
-
-### Authorization
-
-CloudDesk supports three tenant roles:
-
-| Role | Permissions |
+| Capability | Implementation |
 |---|---|
-| `owner` | Full tenant and membership administration |
-| `admin` | Add users and access tenant resources |
-| `member` | Access tenant resources available to regular members |
-
----
-
-## Non-Functional Requirements
-
-CloudDesk should provide:
-
-- Secure authentication and authorization.
-- Tenant data isolation.
-- Maintainable application code.
-- Repeatable infrastructure deployment.
-- Private database connectivity.
-- Secure secret retrieval.
-- Consistent API responses.
-- Cost-conscious infrastructure.
-- Scalable stateless compute.
-- Auditable membership changes.
-- Clear operational documentation.
+| Authentication | Amazon Cognito |
+| JWT enforcement | API Gateway HTTP API JWT authorizer |
+| Application user provisioning | Cognito Post Confirmation Lambda trigger |
+| Multi-tenancy | `users`, `tenants`, and `tenant_users` relational model |
+| Authorization | Shared membership, admin, and owner guards |
+| Persistence | Amazon RDS for PostgreSQL |
+| Credential storage | AWS Secrets Manager |
+| Private secret access | Secrets Manager interface VPC endpoint |
+| Compute | AWS Lambda |
+| API layer | Amazon API Gateway HTTP API |
+| Infrastructure as Code | AWS SAM / CloudFormation |
+| CI/CD | GitHub Actions and AWS OIDC |
+| Test framework | pytest |
+| Code quality | Black, isort, and Ruff |
+| Monitoring | CloudWatch Logs, metrics, alarms, dashboard, and SNS |
 
 ---
 
 ## Solution Architecture
 
-```text
-Client
-  │
-  │ HTTPS request with Cognito JWT
-  ▼
-Amazon API Gateway HTTP API
-  │
-  │ Cognito JWT Authorizer
-  ▼
-AWS Lambda
-  │
-  ├── Authentication
-  ├── Authorization
-  ├── Input validation
-  └── Business logic
-  │
-  ▼
-Shared Lambda Layer
-  ├── auth.py
-  ├── authorization.py
-  ├── config.py
-  ├── db.py
-  ├── response.py
-  ├── secrets.py
-  └── serialization.py
-  │
-  ├──────────────► AWS Secrets Manager
-  │
-  ▼
-Amazon RDS for PostgreSQL
-  ├── users
-  ├── tenants
-  └── tenant_users
+```mermaid
+flowchart TB
+    Client[API Client] -->|HTTPS + Cognito JWT| APIGW[Amazon API Gateway HTTP API]
+
+    Cognito[Amazon Cognito User Pool] -->|JWT issuer| APIGW
+    Cognito -->|Post Confirmation trigger| Provision[User Provisioning Lambda]
+
+    APIGW -->|Validated JWT claims| Lambda[AWS Lambda Functions]
+
+    Lambda --> Shared[Shared Lambda Layer]
+    Provision --> Shared
+
+    Shared --> Auth[Authentication and Authorization]
+    Shared --> DB[Database Access]
+    Shared --> Response[Response and Serialization]
+    Shared --> Obs[Observability Helper]
+
+    DB -->|GetSecretValue over HTTPS| Endpoint[Secrets Manager Interface VPC Endpoint]
+    Endpoint --> Secrets[AWS Secrets Manager]
+
+    DB -->|PostgreSQL 5432| RDS[(Amazon RDS PostgreSQL)]
+
+    Lambda --> Logs[Amazon CloudWatch Logs]
+    Logs --> Dashboard[CloudWatch Dashboard]
+
+    Metrics[AWS Service Metrics] --> Alarms[CloudWatch Alarms]
+    Alarms --> SNS[Amazon SNS]
+    SNS --> Email[Confirmed Email Subscription]
+
+    GitHub[GitHub Repository] --> Actions[GitHub Actions]
+    Actions -->|OIDC token| STS[AWS STS]
+    STS -->|Short-lived credentials| SAM[AWS SAM / CloudFormation]
 ```
 
-Detailed architecture documentation is available in:
+![CloudDesk Solution Architecture](docs/diagrams/01-solution-architecture.svg)
+![CloudDesk Deployment Architecture](docs/diagrams/02-deployment-architecture.svg)
+![CloudDesk Request Lifecycle](docs/diagrams/06-request-lifecycle.svg)
 
-```text
-docs/architecture.md
-```
+### Core AWS components
+
+| Component | Responsibility |
+|---|---|
+| API Gateway HTTP API | HTTPS routing and JWT authorization |
+| AWS Lambda | Stateless business logic |
+| Amazon Cognito | Registration, authentication, and token issuance |
+| Amazon RDS PostgreSQL | Relational application state |
+| AWS Secrets Manager | Database credentials |
+| Interface VPC endpoint | Private Secrets Manager connectivity |
+| AWS SAM | Serverless Infrastructure as Code |
+| CloudWatch | Logs, metrics, alarms, and dashboard |
+| Amazon SNS | Alarm email notifications |
+| GitHub Actions | Continuous integration and deployment |
+| AWS STS + OIDC | Short-lived deployment credentials |
 
 ---
 
-## Network Architecture
+## Request Lifecycle
 
-Database-connected Lambda functions run inside the configured VPC.
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Client
+    participant Cognito as Amazon Cognito
+    participant API as API Gateway
+    participant Lambda as AWS Lambda
+    participant Shared as Shared Layer
+    participant Secrets as Secrets Manager
+    participant RDS as PostgreSQL
+    participant CW as CloudWatch
 
-```text
-AWS Lambda
-  │
-  ├── Lambda security group
-  │
-  ├── Private subnet connectivity
-  │
-  ├── PostgreSQL traffic to RDS on port 5432
-  │
-  └── HTTPS traffic to Secrets Manager endpoint on port 443
-  │
-  ├──────────────► Secrets Manager interface VPC endpoint
-  │
-  └──────────────► Amazon RDS for PostgreSQL
+    Client->>Cognito: Authenticate
+    Cognito-->>Client: Access token
+    Client->>API: HTTPS request + Bearer token
+    API->>API: Validate JWT
+    API->>Lambda: Invoke with trusted claims
+    Lambda->>Shared: Resolve current user and permissions
+    Shared->>Secrets: Retrieve cached database credentials
+    Secrets-->>Shared: Secret
+    Shared->>RDS: Query application data
+    RDS-->>Shared: Result
+    Shared-->>Lambda: Authorized data
+    Lambda->>CW: Structured log
+    Lambda-->>API: Standard JSON response
+    API-->>Client: HTTPS response
 ```
 
-The RDS security group allows PostgreSQL traffic from the Lambda security group.
-
-The Secrets Manager interface endpoint allows Lambda to retrieve database credentials privately without requiring a NAT Gateway.
+API Gateway performs JWT validation before protected Lambda functions run. Lambda consumes the trusted claims supplied in the API Gateway event and maps the Cognito identity to the corresponding CloudDesk user.
 
 ---
 
 ## Identity and User Provisioning
 
-CloudDesk separates authentication identities from application users.
+CloudDesk separates the identity provider from application data.
 
-```text
-User signup
-    │
-    ▼
-Amazon Cognito
-    │
-    ▼
-User confirms account
-    │
-    ▼
-Post Confirmation Lambda
-    │
-    ▼
-CloudDesk users table
+```mermaid
+flowchart LR
+    Signup[User signs up] --> Cognito[Amazon Cognito]
+    Cognito --> Confirm[User confirms account]
+    Confirm --> Trigger[Post Confirmation Lambda]
+    Trigger --> Users[(CloudDesk users table)]
 ```
 
-Amazon Cognito manages authentication-related information such as:
+### Cognito manages
 
-- User credentials.
-- Account confirmation.
-- Identity claims.
-- Token issuance.
+- Credentials
+- Account confirmation
+- Password flows
+- Identity claims
+- Access and ID token issuance
 
-PostgreSQL stores CloudDesk application information such as:
+### PostgreSQL manages
 
-- CloudDesk user ID.
-- Email address.
-- First and last name.
-- Tenant ownership.
-- Tenant membership.
-- Tenant role.
-- Membership status.
-
-This prevents the identity provider from becoming the application database.
-
----
-
-## Authentication Flow
-
-Protected API requests follow this flow:
-
-```text
-Client
-  │
-  │ Access token
-  ▼
-API Gateway JWT Authorizer
-  │
-  │ Token validated
-  ▼
-Lambda
-  │
-  ▼
-get_current_user()
-  │
-  ▼
-CloudDesk users table
-```
-
-API Gateway validates the token before the protected Lambda function runs.
-
-Lambda does not repeat JWT signature verification. It reads the validated claims supplied by API Gateway and maps the Cognito identity to the corresponding CloudDesk user.
+- CloudDesk user ID
+- Cognito subject mapping
+- Email and profile fields
+- Tenant ownership
+- Tenant memberships
+- Tenant-specific roles
+- Membership status
 
 ---
 
 ## Multi-Tenant Data Model
 
-```text
-users
-  │
-  │ One user can have many memberships
-  ▼
-tenant_users
-  ▲
-  │ One tenant can have many memberships
-  │
-tenants
+```mermaid
+erDiagram
+    USERS ||--o{ TENANT_USERS : has
+    TENANTS ||--o{ TENANT_USERS : contains
+
+    USERS {
+        uuid id PK
+        string cognito_user_id UK
+        string email UK
+        string status
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    TENANTS {
+        uuid id PK
+        string name
+        string slug UK
+        string status
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    TENANT_USERS {
+        uuid tenant_id FK
+        uuid user_id FK
+        string role
+        string status
+        timestamp created_at
+        timestamp updated_at
+    }
 ```
 
-The `tenant_users` table connects users and tenants.
+The `tenant_users` table models a many-to-many relationship:
 
-It stores:
+- One user can belong to many tenants
+- One tenant can contain many users
+- A user can hold a different role in each tenant
+- Membership can be deactivated without deleting historical data
 
-- `tenant_id`
-- `user_id`
-- `role`
-- `status`
-- `created_at`
-- `updated_at`
+A protected tenant operation must resolve an active membership using both:
 
-This allows one user to belong to multiple tenants while holding a different role in each tenant.
+```text
+tenant_id + current_user.id
+```
 
-### Database tables
-
-#### `users`
-
-Stores CloudDesk application users provisioned after Cognito confirmation.
-
-#### `tenants`
-
-Stores organizations created inside CloudDesk.
-
-#### `tenant_users`
-
-Stores the many-to-many relationship between users and tenants, including the user's role and membership status.
+The tenant identifier is never trusted by itself.
 
 ---
 
-## Authentication and Authorization
+## Authorization Model
 
-Authentication answers:
-
-> Who is making the request?
-
-Authorization answers:
-
-> Is this user permitted to perform this action?
-
-CloudDesk centralizes authorization through reusable helpers:
+CloudDesk centralizes tenant authorization through reusable helpers:
 
 ```python
 require_membership()
@@ -298,93 +362,329 @@ require_admin()
 require_owner()
 ```
 
-### Authorization hierarchy
+### Role matrix
 
-```text
-require_membership()
-        │
-        ├── Membership must exist
-        └── Membership must be active
+| Operation | Owner | Admin | Member |
+|---|:---:|:---:|:---:|
+| Retrieve tenant | ✅ | ✅ | ✅ |
+| List tenant members | ✅ | ✅ | ✅ |
+| Add member | ✅ | ✅ | ❌ |
+| Update member role | ✅ | ❌ | ❌ |
+| Remove member | ✅ | ❌ | ❌ |
+| Demote/remove tenant owner | ❌ | ❌ | ❌ |
 
-require_admin()
-        │
-        ├── Calls require_membership()
-        └── Permits owner or admin
+Owner safeguards prevent orphaned tenants:
 
-require_owner()
-        │
-        ├── Calls require_membership()
-        └── Permits owner only
-```
-
-This prevents permission logic from being duplicated across Lambda handlers.
+- The owner role cannot be assigned through the regular add-member endpoint
+- The tenant owner cannot be demoted
+- The tenant owner cannot be removed
+- Self-removal is rejected
 
 ---
 
-## Membership Lifecycle
-
-```text
-Existing CloudDesk user
-        │
-        ▼
-Added to tenant
-status = active
-role = member or admin
-        │
-        ▼
-Role may be updated
-member ↔ admin
-        │
-        ▼
-Membership removed
-status = inactive
-```
-
-Membership removal uses soft deletion.
-
-The row remains in PostgreSQL, but its status changes from `active` to `inactive`.
-
-This preserves historical membership information and supports future audit or restoration requirements.
-
----
-
-## Implemented API Endpoints
+## API Endpoints
 
 ### Platform endpoints
 
-| Method | Endpoint | Description | Access |
+| Method | Endpoint | Purpose | Access |
 |---|---|---|---|
-| `GET` | `/health` | Confirm API and Lambda availability | Public |
-| `GET` | `/database-test` | Verify database connectivity | Deployment verification |
+| `GET` | `/health` | Verify API and Lambda availability | Public |
+| `GET` | `/database-test` | Verify Lambda-to-PostgreSQL connectivity | Deployment verification |
 
 ### User endpoint
 
-| Method | Endpoint | Description | Access |
+| Method | Endpoint | Purpose | Access |
 |---|---|---|---|
-| `GET` | `/me` | Return the authenticated CloudDesk user | Authenticated user |
+| `GET` | `/me` | Retrieve the authenticated CloudDesk user | Authenticated |
 
 ### Tenant endpoints
 
-| Method | Endpoint | Description | Access |
+| Method | Endpoint | Purpose | Access |
 |---|---|---|---|
-| `POST` | `/tenants` | Create a tenant and assign the creator as owner | Authenticated user |
-| `GET` | `/tenants` | List tenants belonging to the current user | Authenticated user |
-| `GET` | `/tenants/{tenantId}` | Retrieve a tenant | Active tenant member |
+| `POST` | `/tenants` | Create a tenant and assign the creator as owner | Authenticated |
+| `GET` | `/tenants` | List tenants belonging to the current user | Authenticated |
+| `GET` | `/tenants/{tenantId}` | Retrieve a tenant | Active member |
 
-### Tenant membership endpoints
+### Membership endpoints
 
-| Method | Endpoint | Description | Access |
+| Method | Endpoint | Purpose | Access |
 |---|---|---|---|
-| `GET` | `/tenants/{tenantId}/members` | List active tenant members | Active tenant member |
+| `GET` | `/tenants/{tenantId}/members` | List active members | Active member |
 | `POST` | `/tenants/{tenantId}/members` | Add an existing CloudDesk user | Owner or admin |
-| `PUT` | `/tenants/{tenantId}/members/{userId}` | Update a member's role | Owner |
-| `DELETE` | `/tenants/{tenantId}/members/{userId}` | Deactivate a membership | Owner |
+| `PUT` | `/tenants/{tenantId}/members/{userId}` | Update a member role | Owner |
+| `DELETE` | `/tenants/{tenantId}/members/{userId}` | Soft-delete a membership | Owner |
 
-Complete request and response documentation is available in:
+Complete contracts are maintained in [`docs/api.md`](docs/api.md).
+
+---
+
+## Network Architecture
+
+Database-connected Lambda functions run inside the configured VPC.
+
+```mermaid
+flowchart LR
+    Lambda[AWS Lambda ENI] -->|TCP 5432| RDS[(RDS PostgreSQL)]
+    Lambda -->|HTTPS 443| Endpoint[Secrets Manager Interface Endpoint]
+    Endpoint --> Secrets[AWS Secrets Manager]
+```
+
+### Network controls
+
+- Lambda functions use configured subnets
+- Lambda has a dedicated security group
+- RDS allows PostgreSQL traffic from the Lambda security group
+- The endpoint allows HTTPS from the Lambda security group
+- Database traffic remains private
+- Secret retrieval does not require a NAT Gateway
+
+The RDS instance is managed outside the current SAM application stack. The template receives existing VPC, subnet, RDS security-group, and secret ARN values as parameters.
+
+---
+
+## Security Architecture
+
+### Identity and API security
+
+- Amazon Cognito manages authentication
+- API Gateway validates JWTs
+- Protected handlers resolve the application user from the Cognito subject
+- Inactive or unprovisioned users are rejected
+
+### Tenant security
+
+- Every tenant-scoped operation checks active membership
+- Shared authorization helpers prevent duplicated permission logic
+- Owner-only and admin-level actions are enforced centrally
+- Owner protection prevents tenant orphaning
+
+### Credential security
+
+- Database credentials are stored in AWS Secrets Manager
+- Secret values are never committed to Git
+- Secrets are validated before use
+- Secrets are cached per warm Lambda environment
+- Private endpoint connectivity avoids a NAT Gateway solely for secret access
+
+### Deployment security
+
+- GitHub Actions uses OIDC
+- No long-lived AWS access keys are stored in GitHub
+- AWS STS issues short-lived credentials
+- The role trust policy is restricted to the repository's immutable GitHub OIDC subject and `main`
+- Deployment permissions are separate from runtime permissions
+
+### Response security
+
+The shared response helper adds:
 
 ```text
-docs/api.md
+Content-Type: application/json
+X-Content-Type-Options: nosniff
+X-Frame-Options: DENY
+Referrer-Policy: no-referrer
+Cache-Control: no-store
 ```
+
+It also supports an optional `X-Request-Id` header.
+
+---
+
+## CI/CD Pipeline
+
+```mermaid
+flowchart TB
+    Dev[Push or pull request] --> CI[CloudDesk CI]
+    CI --> Black[Black]
+    Black --> Isort[isort]
+    Isort --> Ruff[Ruff]
+    Ruff --> Tests[pytest + coverage gate]
+    Tests --> Validate[SAM validate]
+    Validate --> Build[SAM build]
+
+    Build --> Branch{main?}
+    Branch -->|No| Stop[Validation complete]
+    Branch -->|Yes, CI passed| Deploy[CloudDesk Deployment]
+    Deploy --> OIDC[GitHub OIDC]
+    OIDC --> STS[AWS STS]
+    STS --> SAMDeploy[SAM deploy]
+    SAMDeploy --> CFN[CloudFormation]
+    CFN --> Retention[30-day Lambda log retention]
+```
+
+### Continuous Integration
+
+The CI workflow runs on pushes and pull requests targeting `dev` or `main`.
+
+Quality gates:
+
+```bash
+black --check .
+isort --check-only .
+ruff check .
+pytest tests/unit tests/handlers --cov=layers/shared/python/shared
+sam validate
+sam build
+```
+
+### Continuous Deployment
+
+A successful CI run on `main` triggers deployment.
+
+The deployment workflow:
+
+1. Checks out the exact validated commit
+2. Configures Python and SAM
+3. Exchanges a GitHub OIDC token for short-lived AWS credentials
+4. Verifies the assumed identity
+5. Builds the application
+6. Deploys `clouddesk-backend`
+7. Applies 30-day retention to CloudDesk Lambda log groups
+
+### GitHub repository variables
+
+| Variable | Purpose |
+|---|---|
+| `AWS_DEPLOY_ROLE_ARN` | OIDC deployment-role ARN |
+| `AWS_REGION` | Deployment region |
+| `DATABASE_SECRET_ARN` | Database-secret ARN |
+| `ALARM_EMAIL` | SNS notification email |
+
+---
+
+## Testing and Code Quality
+
+The suite currently contains **79 passing tests** covering:
+
+- JWT claim extraction
+- Authenticated-user resolution
+- Inactive and unprovisioned user rejection
+- Tenant membership checks
+- Admin and owner authorization
+- Response formatting
+- Serialization
+- Secrets Manager retrieval, validation, caching, and failures
+- PostgreSQL connection caching
+- Commit and rollback behavior
+- Database query helpers
+- Tenant creation
+- Duplicate tenant prevention
+- Member creation
+- Duplicate membership rejection
+- Role validation
+- Owner demotion protection
+- Owner removal protection
+- Membership soft deletion
+
+### Install development dependencies
+
+```bash
+cd backend
+python -m pip install -r requirements-dev.txt
+```
+
+### Run tests
+
+```bash
+pytest
+```
+
+### Coverage
+
+```bash
+pytest tests/unit tests/handlers \
+  --cov=layers/shared/python/shared \
+  --cov-report=term-missing
+```
+
+### HTML coverage
+
+```bash
+pytest tests/unit tests/handlers \
+  --cov=layers/shared/python/shared \
+  --cov-report=html
+```
+
+---
+
+## Monitoring and Observability
+
+CloudDesk uses native AWS observability services.
+
+### Structured logs
+
+The shared observability helper captures non-sensitive context:
+
+- AWS request ID
+- API Gateway request ID
+- Function name
+- Route key
+- HTTP method and path
+- Tenant ID
+- Target user ID
+- Current user ID
+- Operation outcome
+- HTTP status code
+
+Instrumented workflows include:
+
+- Tenant creation
+- Member addition
+- Member-role update
+- Member removal
+
+### Log retention
+
+CloudDesk Lambda log groups use a **30-day retention period**.
+
+Retention is applied after deployment to existing groups, avoiding conflicts with groups automatically created by Lambda.
+
+### CloudWatch alarms
+
+| Alarm | Condition |
+|---|---|
+| Lambda errors | At least one error in five minutes |
+| Lambda throttles | At least one throttle in five minutes |
+| API Gateway 5XX | At least one server error in five minutes |
+| RDS high CPU | Average CPU above 80% for two evaluation periods |
+
+Alarm actions publish to the confirmed SNS email subscription.
+
+### Dashboard
+
+The `clouddesk-dev` dashboard displays:
+
+- Lambda invocations
+- Lambda errors
+- Lambda duration
+- API Gateway 5XX errors
+- RDS CPU utilization
+- RDS database connections
+
+---
+
+## Infrastructure as Code
+
+The SAM template provisions or configures:
+
+- API Gateway HTTP API
+- Cognito User Pool and application client
+- JWT authorizer
+- Cognito Post Confirmation integration
+- Lambda functions
+- Shared Lambda layer
+- IAM permissions
+- Lambda security group
+- RDS security-group ingress
+- Secrets Manager interface endpoint
+- SNS topic and subscription
+- CloudWatch alarms
+- CloudWatch dashboard
+- Stack outputs
+
+AWS SAM was selected because the application is serverless-first.
+
+Terraform was intentionally not added. Maintaining two Infrastructure as Code systems for one stack would increase complexity without solving another requirement.
 
 ---
 
@@ -392,40 +692,29 @@ docs/api.md
 
 ```text
 clouddesk-multi-tenant-saas/
+├── .github/
+│   └── workflows/
+│       ├── ci.yml
+│       └── deploy.yml
 ├── backend/
 │   ├── add_member/
-│   │   ├── __init__.py
-│   │   ├── handler.py
-│   │   └── requirements.txt
 │   ├── create_tenant/
-│   │   ├── __init__.py
-│   │   ├── handler.py
-│   │   └── requirements.txt
 │   ├── database/
 │   │   └── migrations/
 │   │       └── 001_initial_schema.sql
 │   ├── database_test/
-│   │   ├── __init__.py
-│   │   ├── handler.py
-│   │   └── requirements.txt
 │   ├── get_tenant/
-│   │   ├── __init__.py
-│   │   ├── handler.py
-│   │   └── requirements.txt
 │   ├── health/
-│   │   ├── __init__.py
-│   │   ├── handler.py
-│   │   └── requirements.txt
 │   ├── layers/
 │   │   └── shared/
 │   │       ├── requirements.txt
 │   │       └── python/
 │   │           ├── shared/
-│   │           │   ├── __init__.py
 │   │           │   ├── auth.py
 │   │           │   ├── authorization.py
 │   │           │   ├── config.py
 │   │           │   ├── db.py
+│   │           │   ├── observability.py
 │   │           │   ├── response.py
 │   │           │   ├── secrets.py
 │   │           │   └── serialization.py
@@ -434,177 +723,86 @@ clouddesk-multi-tenant-saas/
 │   │           ├── psycopg_binary.libs/
 │   │           └── tzdata/
 │   ├── list_members/
-│   │   ├── __init__.py
-│   │   ├── handler.py
-│   │   └── requirements.txt
 │   ├── list_tenants/
-│   │   ├── __init__.py
-│   │   ├── handler.py
-│   │   └── requirements.txt
 │   ├── me/
-│   │   ├── __init__.py
-│   │   ├── handler.py
-│   │   └── requirements.txt
 │   ├── remove_member/
-│   │   ├── __init__.py
-│   │   ├── handler.py
-│   │   └── requirements.txt
+│   ├── tests/
+│   │   ├── handlers/
+│   │   └── unit/
 │   ├── update_member/
-│   │   ├── __init__.py
-│   │   ├── handler.py
-│   │   └── requirements.txt
 │   ├── user_provisioning/
-│   │   ├── __init__.py
-│   │   ├── handler.py
-│   │   └── requirements.txt
+│   ├── pyproject.toml
+│   ├── requirements-dev.txt
 │   ├── samconfig.toml
 │   └── template.yaml
 ├── docs/
-│   ├── architecture.md
 │   ├── api.md
+│   ├── architecture.md
 │   ├── decisions.md
 │   └── troubleshooting.md
 ├── .gitignore
+├── LICENSE
 └── README.md
-```
-
----
-
-## Shared Application Modules
-
-CloudDesk uses a shared Lambda layer to avoid duplicating common functionality.
-
-| Module | Responsibility |
-|---|---|
-| `config.py` | Central application configuration |
-| `secrets.py` | Retrieve and validate database credentials |
-| `db.py` | PostgreSQL connection and database queries |
-| `auth.py` | Extract authenticated identity and current user |
-| `authorization.py` | Enforce tenant membership and roles |
-| `response.py` | Generate consistent API responses |
-| `serialization.py` | Convert UUID and timestamp values into JSON-compatible formats |
-
-Application modules remain under:
-
-```text
-backend/layers/shared/python/shared/
-```
-
-Third-party dependencies remain under:
-
-```text
-backend/layers/shared/python/
-```
-
----
-
-## AWS Services
-
-| Service | Purpose |
-|---|---|
-| Amazon API Gateway HTTP API | API routing and JWT authorization |
-| AWS Lambda | Serverless application compute |
-| Amazon Cognito | User registration and authentication |
-| Amazon RDS for PostgreSQL | Relational application database |
-| AWS Secrets Manager | Secure database credential storage |
-| AWS Identity and Access Management | Lambda execution permissions |
-| Amazon VPC | Private network connectivity |
-| AWS PrivateLink interface endpoint | Private Secrets Manager access |
-| AWS CloudFormation | Infrastructure provisioning through AWS SAM |
-| Amazon CloudWatch | Lambda logs and operational visibility |
-
----
-
-## Infrastructure as Code
-
-CloudDesk infrastructure is defined using AWS SAM.
-
-The SAM template provisions or configures:
-
-- API Gateway HTTP API.
-- Cognito User Pool.
-- Cognito application client.
-- API Gateway JWT authorizer.
-- Lambda functions.
-- Shared Lambda layer.
-- IAM execution permissions.
-- Lambda security group.
-- RDS security-group ingress.
-- Secrets Manager interface VPC endpoint.
-- Lambda permission for the Cognito Post Confirmation trigger.
-
-AWS SAM was selected because the project is primarily serverless and SAM provides direct support for Lambda, API Gateway, layers, Cognito integrations, and CloudFormation deployments.
-
-Terraform was not added because using two Infrastructure as Code tools for the same application would introduce unnecessary complexity without solving an additional requirement.
-
----
-
-## Prerequisites
-
-Install and configure:
-
-- AWS CLI.
-- AWS SAM CLI.
-- Python 3.13.
-- PostgreSQL client.
-- Git.
-
-Confirm AWS authentication:
-
-```bash
-aws sts get-caller-identity
-```
-
-Confirm the SAM CLI installation:
-
-```bash
-sam --version
 ```
 
 ---
 
 ## Deployment
 
-Move into the backend directory:
+### Prerequisites
+
+- AWS CLI
+- AWS SAM CLI
+- Python 3.13
+- PostgreSQL client
+- Git
+- An AWS account with required permissions
+
+Confirm authentication:
+
+```bash
+aws sts get-caller-identity
+```
+
+### Existing resources and values
+
+The development deployment expects:
+
+- RDS PostgreSQL
+- Database secret
+- VPC
+- Two Lambda subnets
+- RDS security group
+- GitHub OIDC provider and deployment role
+- GitHub repository variables
+
+### Local validation
 
 ```bash
 cd backend
-```
-
-### Validate the SAM template
-
-```bash
+black --check .
+isort --check-only .
+ruff check .
+pytest
 sam validate
-```
-
-### Build the application
-
-```bash
 sam build
 ```
 
-### Deploy the application
+### Local deployment
 
 ```bash
 sam deploy
 ```
 
-Deployment configuration is stored in:
+Current deployment:
 
 ```text
-backend/samconfig.toml
-```
-
-The CloudFormation stack is:
-
-```text
-clouddesk-backend
-```
-
-The deployment region is:
-
-```text
-us-east-1
+Environment: dev
+Region: us-east-1
+Stack: clouddesk-backend
+RDS identifier: clouddesk-db
+Dashboard: clouddesk-dev
+Alarm topic: clouddesk-dev-alarms
 ```
 
 ---
@@ -617,19 +815,7 @@ The initial schema is located at:
 backend/database/migrations/001_initial_schema.sql
 ```
 
-The migration creates:
-
-- `tenant_status`
-- `user_status`
-- `tenant_role`
-- `users`
-- `tenants`
-- `tenant_users`
-- Indexes
-- Foreign keys
-- Timestamp update triggers
-
-Apply the migration using a PostgreSQL client connected to the CloudDesk database:
+Apply it from an environment with database network access:
 
 ```bash
 psql \
@@ -640,407 +826,230 @@ psql \
   --file=database/migrations/001_initial_schema.sql
 ```
 
-Database credentials must be retrieved securely from AWS Secrets Manager and must never be committed to the repository.
+Credentials must come from Secrets Manager and must never be committed.
 
 ---
 
 ## API Usage Examples
 
-Set the authenticated user's access token:
-
 ```bash
+export API_URL="https://<api-id>.execute-api.us-east-1.amazonaws.com"
 export TOKEN="<cognito-access-token>"
 ```
+
+Append the stage to `API_URL` when the API does not use `$default`.
 
 ### Retrieve the authenticated user
 
 ```bash
-curl \
-  -H "Authorization: Bearer $TOKEN" \
-  "https://<api-id>.execute-api.us-east-1.amazonaws.com/dev/me"
+curl -H "Authorization: Bearer $TOKEN" "$API_URL/me"
 ```
 
 ### Create a tenant
 
-```bash
-curl -X POST \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-        "name": "NovaTech",
-        "slug": "novatech"
-      }' \
-  "https://<api-id>.execute-api.us-east-1.amazonaws.com/dev/tenants"
-```
-
-### List the user's tenants
-
-```bash
-curl \
-  -H "Authorization: Bearer $TOKEN" \
-  "https://<api-id>.execute-api.us-east-1.amazonaws.com/dev/tenants"
-```
-
-### Retrieve a tenant
-
-```bash
-curl \
-  -H "Authorization: Bearer $TOKEN" \
-  "https://<api-id>.execute-api.us-east-1.amazonaws.com/dev/tenants/<tenant-id>"
-```
-
-### List tenant members
-
-```bash
-curl \
-  -H "Authorization: Bearer $TOKEN" \
-  "https://<api-id>.execute-api.us-east-1.amazonaws.com/dev/tenants/<tenant-id>/members"
-```
-
-### Add an existing CloudDesk user
+The slug is generated from the tenant name.
 
 ```bash
 curl -X POST \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{
-        "email": "employee@example.com",
-        "role": "member"
-      }' \
-  "https://<api-id>.execute-api.us-east-1.amazonaws.com/dev/tenants/<tenant-id>/members"
+  -d '{"name":"NovaTech"}' \
+  "$API_URL/tenants"
 ```
 
-### Update a member's role
+### Add a member
+
+```bash
+curl -X POST \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"email":"employee@example.com","role":"member"}' \
+  "$API_URL/tenants/<tenant-id>/members"
+```
+
+### Update a member role
 
 ```bash
 curl -X PUT \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{
-        "role": "admin"
-      }' \
-  "https://<api-id>.execute-api.us-east-1.amazonaws.com/dev/tenants/<tenant-id>/members/<user-id>"
+  -d '{"role":"admin"}' \
+  "$API_URL/tenants/<tenant-id>/members/<user-id>"
 ```
 
-### Remove a tenant member
+### Remove a member
 
 ```bash
 curl -X DELETE \
   -H "Authorization: Bearer $TOKEN" \
-  "https://<api-id>.execute-api.us-east-1.amazonaws.com/dev/tenants/<tenant-id>/members/<user-id>"
+  "$API_URL/tenants/<tenant-id>/members/<user-id>"
 ```
 
 ---
 
-## Running Tests
-
-CloudDesk uses **pytest** for automated testing.
-
-### Install development dependencies
-
-```bash
-pip install -r requirements-dev.txt
-```
-
-### Run all tests
-
-```bash
-pytest tests/unit tests/handlers
-```
-
-### Generate a coverage report
-
-```bash
-pytest tests/unit tests/handlers \
-    --cov=layers/shared/python/shared \
-    --cov-report=html
-```
-
-The HTML coverage report will be generated in:
-
-```text
-htmlcov/index.html
-```
-
----
-
-## Security Considerations
-
-CloudDesk implements the following security controls:
-
-- API Gateway validates Cognito JWTs before protected Lambda functions run.
-- Database credentials are stored in AWS Secrets Manager.
-- Secrets are not stored in source code or committed to Git.
-- Database-connected Lambda functions run inside the VPC.
-- RDS accepts PostgreSQL traffic from the Lambda security group.
-- Secrets Manager is accessed through a VPC interface endpoint.
-- Lambda permissions are limited to required AWS operations.
-- Tenant access requires an active membership.
-- Administrative actions require appropriate tenant roles.
-- The `owner` role cannot be assigned through the standard member endpoint.
-- The tenant owner cannot be demoted.
-- The tenant owner cannot be removed.
-- Membership removal uses soft deletion.
-- Tenant-scoped endpoints verify membership before returning tenant data.
-
----
-
-## Reliability Considerations
-
-The architecture provides:
-
-- Managed authentication through Amazon Cognito.
-- Managed API routing through API Gateway.
-- Stateless Lambda compute.
-- Transactional tenant creation and owner assignment.
-- PostgreSQL relational integrity.
-- Soft membership deletion.
-- Reusable error handling.
-- CloudWatch execution logs.
-- Consistent application response structures.
-
-For higher traffic, Amazon RDS Proxy may be considered to manage Lambda database connections.
-
-RDS Proxy is intentionally not included at this stage because the current workload does not justify the additional infrastructure and cost.
-
----
-
-## Scalability Considerations
-
-API Gateway and Lambda can scale automatically with incoming requests.
-
-```text
-API Gateway
-     │
-     ▼
-AWS Lambda
-     │
-     ▼
-PostgreSQL
-```
-
-The relational database is the primary scaling boundary.
-
-PostgreSQL remains appropriate because CloudDesk requires:
-
-- Relational joins.
-- Transactional consistency.
-- Tenant membership relationships.
-- Role-based access queries.
-- Foreign-key integrity.
-
-A distributed database or container orchestration platform would introduce unnecessary complexity for the current workload.
-
----
-
-## Performance Considerations
-
-- API Gateway HTTP API provides lightweight serverless routing.
-- Lambda functions remain stateless.
-- Database connections may be reused during warm Lambda invocations.
-- PostgreSQL indexes support tenant and membership lookups.
-- Queries use targeted identifiers instead of table scans.
-- UUID and timestamp values are serialized consistently.
-- Shared authorization helpers avoid repeated security logic.
-
-Database connections and query performance should be monitored as Lambda concurrency increases.
-
----
-
-## Cost Optimization
-
-The architecture avoids unnecessary services and recurring expenses.
-
-Cost-conscious decisions include:
-
-- API Gateway HTTP API instead of REST API.
-- Lambda instead of permanently running application servers.
-- A Secrets Manager interface endpoint instead of a NAT Gateway.
-- No ECS or EKS.
-- No Kubernetes.
-- No RDS Proxy until connection pressure requires it.
-- Shared code through a Lambda layer.
-- AWS-managed services for authentication and API routing.
-
-The primary continuous cost is Amazon RDS and its supporting networking resources.
-
----
-
-## AWS Well-Architected Framework Alignment
-
-### Security
-
-- Cognito authentication.
-- API Gateway JWT authorization.
-- Secrets Manager credential storage.
-- Private database connectivity.
-- Security-group boundaries.
-- Role-based tenant authorization.
-- No credentials stored in source control.
-
-### Reliability
-
-- Managed AWS services.
-- Stateless compute.
-- PostgreSQL foreign keys.
-- Transaction-based tenant creation.
-- Soft deletion for membership records.
-- CloudWatch logging.
-
-### Performance Efficiency
-
-- Serverless compute.
-- HTTP API.
-- Indexed relational lookups.
-- Warm Lambda connection reuse.
-- Targeted PostgreSQL queries.
-
-### Cost Optimization
-
-- No NAT Gateway.
-- No permanently running application servers.
-- No container orchestration.
-- No unnecessary second Infrastructure as Code tool.
-- No RDS Proxy without a demonstrated requirement.
+## AWS Well-Architected Alignment
 
 ### Operational Excellence
 
-- Infrastructure defined through AWS SAM.
-- Shared application modules.
-- Repeatable build and deployment commands.
-- Consistent API responses.
-- Reusable authentication and authorization helpers.
-- Documented architectural decisions.
+- Infrastructure defined with AWS SAM
+- CI quality gates before deployment
+- Automated OIDC deployment
+- Structured logging
+- Alarms, notifications, and dashboard
+- Documented decisions and troubleshooting
+
+### Security
+
+- Cognito authentication
+- API Gateway JWT authorization
+- Tenant-level RBAC
+- Secrets Manager
+- Private database and secret connectivity
+- OIDC short-lived credentials
+- Security response headers
+- No secrets committed
+
+### Reliability
+
+- Managed AWS services
+- Stateless compute
+- Transactional owner assignment
+- PostgreSQL constraints
+- Soft deletion
+- CloudFormation rollback
+- Alarm notifications
+
+### Performance Efficiency
+
+- HTTP API
+- Serverless compute
+- Indexed lookups
+- Cached secrets
+- Warm connection reuse
+- Targeted queries
+
+### Cost Optimization
+
+- No permanently running application servers
+- No ECS or EKS
+- No NAT Gateway solely for secret access
+- No duplicate IaC tool
+- No RDS Proxy without demonstrated need
+- 30-day log retention
+- Native CloudWatch
 
 ---
 
 ## Engineering Decisions
 
-Important engineering decisions are documented in:
+Detailed ADRs are maintained in [`docs/decisions.md`](docs/decisions.md).
 
-```text
-docs/decisions.md
-```
-
-Current decisions include:
-
-- Amazon Cognito for identity management.
-- PostgreSQL for relational tenant data.
-- API Gateway HTTP API instead of REST API.
-- AWS Lambda and AWS SAM.
-- Event-driven user provisioning.
-- Separate identity and application user records.
-- Shared authentication and authorization helpers.
-- Role-based tenant access.
-- Soft deletion for tenant memberships.
-- Secrets Manager interface endpoint instead of a NAT Gateway.
-- No RDS Proxy at the current scale.
-- No Terraform in addition to SAM.
+| Decision | Rationale |
+|---|---|
+| Serverless architecture | Reduces server operations and scales with requests |
+| AWS SAM | Best fit for a Lambda/API Gateway application |
+| HTTP API | Lower cost and sufficient JWT capabilities |
+| Amazon Cognito | Managed identity integrated with API Gateway |
+| PostgreSQL | Supports joins, transactions, and relational integrity |
+| Post Confirmation provisioning | Separates identity from application data |
+| Shared Lambda layer | Centralizes reusable security and database logic |
+| Soft-delete memberships | Preserves history |
+| Interface endpoint | Private secret access without NAT |
+| GitHub OIDC | Removes long-lived deployment credentials |
+| Native CloudWatch | Meets current operational requirements |
+| No RDS Proxy yet | Current workload does not justify it |
+| No Terraform alongside SAM | Avoids two IaC control planes |
 
 ---
 
-## Current Project Status
+## Operational Troubleshooting Highlights
 
-### Completed
+The project includes real engineering lessons:
 
-- AWS serverless infrastructure.
-- PostgreSQL schema.
-- Cognito authentication.
-- API Gateway JWT authorization.
-- Automatic application user provisioning.
-- Current-user endpoint.
-- Tenant creation.
-- Automatic owner assignment.
-- Tenant listing.
-- Protected tenant retrieval.
-- Tenant membership listing.
-- Member addition.
-- Member role updates.
-- Membership soft deletion.
-- Reusable RBAC authorization layer.
-- Private secret retrieval.
-- Private Lambda-to-RDS connectivity.
+- Linux Psycopg layer packages conflicting with Windows tests
+- Local `boto3` missing even though Lambda provides it
+- GitHub OIDC trust failure caused by immutable repository subject claims
+- CloudFormation rollback after missing deployment permissions
+- Existing log groups conflicting with explicit CloudFormation resources
+- Git Bash path conversion corrupting `/aws/lambda/...`
+- Missing SNS, alarm, and dashboard permissions
+- Required SAM parameters missing from the deployment workflow
 
-### Planned
-
-- Tenant-scoped business resources.
-- Structured application logging.
-- Automated unit tests.
-- Integration tests.
-- CI/CD deployment workflow.
-- Monitoring and alerting.
-- Production hardening.
-- Architecture diagrams.
-- Deployment diagrams.
-- Request-flow diagrams.
-- Expanded troubleshooting documentation.
+See [`docs/troubleshooting.md`](docs/troubleshooting.md).
 
 ---
 
 ## Lessons Learned
 
-This project demonstrates that multi-tenancy is not achieved by adding a `tenant_id` field alone.
+CloudDesk demonstrates that multi-tenancy is not achieved by adding a `tenant_id` column alone.
 
-A credible multi-tenant SaaS backend requires:
+A credible SaaS backend requires:
 
-- A clear identity model.
-- Application-level user provisioning.
-- Tenant membership relationships.
-- Role-based authorization.
-- Tenant data isolation.
-- Transactional operations.
-- Secure credential management.
-- Private network access.
-- Consistent response patterns.
-- Protection of owner-level operations.
+- A clear identity model
+- Application-level user provisioning
+- Tenant membership relationships
+- Central authorization
+- Owner safeguards
+- Tenant-scoped queries
+- Transactional operations
+- Secret and network security
+- Automated business-rule tests
+- Repeatable deployment
+- Operational visibility
 
-The most important architectural lesson was separating:
+The most important implementation lesson was separating authentication, authorization, database access, secret retrieval, serialization, responses, observability, and business logic.
 
-- Authentication.
-- Authorization.
-- Database access.
-- Serialization.
-- Response handling.
-- Business logic.
-
-This separation allowed new API endpoints to be added without duplicating security and database logic.
+The most important operational lesson was that CI/CD is not complete when a workflow exists. Trust policies, OIDC claims, deployment permissions, parameters, rollback behavior, and post-deployment operations must all work together.
 
 ---
 
-<!-- ## Future Improvements
+## Future Improvements
 
-Potential future improvements include:
+Future work should be introduced only when it solves a demonstrated requirement.
 
-- Automated unit and integration testing.
-- CI/CD deployment using GitHub Actions and AWS OIDC.
-- Structured JSON logging.
-- CloudWatch dashboards and alarms.
-- AWS X-Ray tracing.
-- API throttling and abuse protection.
-- RDS Proxy if database connection pressure increases.
-- Tenant-scoped business resources.
-- Email-based member invitation workflow.
-- Tenant ownership transfer.
-- Audit-event storage.
-- Automated database migrations.
-- Backup and recovery validation.
-- Separate development, staging, and production environments.
+### Product
 
-These improvements will only be introduced when they solve a clear engineering requirement. -->
+- Tenant-scoped business resources
+- Member invitation workflow
+- Tenant ownership transfer
+- Audit-event storage
+- Pagination and filtering
+- Membership reactivation
+
+### Reliability
+
+- Automated database migrations
+- Backup and restore testing
+- RDS Multi-AZ validation
+- RDS Proxy when connection pressure appears
+
+### Security
+
+- Separate staging and production
+- Custom domain and certificate
+- API throttling
+- WAF when traffic and risk justify it
+- Periodic IAM reduction
+
+### Testing and operations
+
+- Cloud integration tests
+- End-to-end authentication tests
+- Load testing
+- Request ID returned by every handler
+- Deployment approvals
+- Versioned releases
 
 ---
 
 ## Documentation
 
-Additional project documentation is available under:
-
-```text
-docs/
-├── architecture.md
-├── api.md
-├── decisions.md
-└── troubleshooting.md
-```
+| Document | Purpose |
+|---|---|
+| [`docs/architecture.md`](docs/architecture.md) | Components, network design, trust boundaries, and flows |
+| [`docs/api.md`](docs/api.md) | Contracts, authorization, examples, and errors |
+| [`docs/decisions.md`](docs/decisions.md) | Architecture decisions and trade-offs |
+| [`docs/troubleshooting.md`](docs/troubleshooting.md) | Symptoms, root causes, fixes, and prevention |
 
 ---
 
@@ -1053,3 +1062,9 @@ Cloud Infrastructure and DevOps portfolio project.
 - Portfolio: [SimeonOnTheCloudSpace](https://simeonprimordial.github.io/SimeonOnTheCloudSpace/)
 - GitHub: [simeonprimordial](https://github.com/simeonprimordial)
 - LinkedIn: [Simeon Siaka](https://www.linkedin.com/in/simeon-siaka-8a8367312/)
+
+---
+
+## License
+
+This project is available under the [MIT License](LICENSE).
